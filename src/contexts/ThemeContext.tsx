@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Appearance, ColorSchemeName } from 'react-native';
 import { Theme, ThemeMode } from '../types';
 import { getTheme } from '../utils/theme';
+import { database } from '../utils/database';
 
 interface ThemeContextType {
   theme: Theme;
@@ -23,6 +24,17 @@ export function ThemeProvider({ children, initialTheme = 'system' }: ThemeProvid
   const [systemColorScheme, setSystemColorScheme] = useState<ColorSchemeName>(
     Appearance.getColorScheme()
   );
+
+  // Load theme from database on app start
+  useEffect(() => {
+    try {
+      const dbPreferences = database.getUserPreferences();
+      setThemeMode(dbPreferences.theme);
+    } catch (error) {
+      console.log('Error loading theme from database:', error);
+      // Fallback to initial theme
+    }
+  }, []);
 
   // Listen to system theme changes
   useEffect(() => {

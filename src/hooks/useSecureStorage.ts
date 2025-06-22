@@ -68,8 +68,7 @@ export function useSecureStorage(key: string): UseStateHook<string> {
 
 // Specific hooks for authentication data
 export const useAuthPin = () => useSecureStorage('auth_pin');
-export const useAuthSettings = () => useSecureStorage('auth_settings');
-export const useUserData = () => useSecureStorage('user_data');
+// Removed useAuthSettings and useUserData - now handled via database
 
 // Helper functions for storing complex objects
 export const storeObject = async (key: string, obj: any) => {

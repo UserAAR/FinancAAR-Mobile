@@ -17,6 +17,7 @@ import { useBiometric } from '../hooks/useBiometric';
 import { useAlert, useToast, useNotification } from '../hooks/useNotification';
 import { database } from '../utils/database';
 import { Account, CardAccount } from '../types';
+import AppLogo from '../components/AppLogo';
 import * as Crypto from 'expo-crypto';
 
 type SettingItem = {
@@ -34,16 +35,17 @@ type SettingItem = {
 
 export default function SettingsScreen() {
   const { theme, themeMode, setThemeMode } = useTheme();
-  const { authState, updateAuthSettings, authenticateWithPin } = useAuth();
+  const { authState, userPreferences, updateUserPreferences, updateUserName, authenticateWithPin, changePin, resetApp } = useAuth();
   const biometric = useBiometric();
   const alert = useAlert();
   const toast = useToast();
-  const { showAlert } = useNotification();
+  const { showAlert, hideAlert } = useNotification();
   const [showPinModal, setShowPinModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
+  const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [newName, setNewName] = useState(authState.userName);
@@ -59,6 +61,8 @@ export default function SettingsScreen() {
   const [newAccountBalance, setNewAccountBalance] = useState('');
   const [newAccountColor, setNewAccountColor] = useState('#00D2AA');
   const [newAccountEmoji, setNewAccountEmoji] = useState('');
+  const [targetPinLength, setTargetPinLength] = useState<4 | 6>(4);
+  const [showThemeModal, setShowThemeModal] = useState(false);
 
   const cardColors = [
     '#00D2AA', '#4CAF50', '#2196F3', '#FF9800', '#E91E63', 
@@ -145,87 +149,115 @@ export default function SettingsScreen() {
   };
 
   const handleThemeChange = () => {
+    setShowThemeModal(true);
+  };
+
+  const handleThemeSelect = async (theme: 'light' | 'dark' | 'system') => {
+    try {
+      setThemeMode(theme);
+      await updateUserPreferences({ theme });
+      setShowThemeModal(false);
+      toast.success('Theme Updated!', `Theme changed to ${theme === 'system' ? 'system default' : theme}`);
+    } catch (error) {
+      alert.error('Error', 'Failed to update theme');
+    }
+  };
+
+    const handlePinLengthChange = () => {
     showAlert({
       type: 'info',
-      title: 'Select Theme',
-      message: 'Choose your preferred theme',
+      title: 'Change PIN Length',
+      message: `Current: ${authState.pinLength} digits. Choose new length:`,
       primaryButton: {
-        text: 'Light',
-        onPress: () => setThemeMode('light'),
-      },
-      secondaryButton: {
-        text: 'More Options',
+        text: authState.pinLength === 4 ? '6 digits (New)' : '4 digits (New)',
         onPress: () => {
-          setTimeout(() => {
-            showAlert({
-              type: 'info',
-              title: 'Theme Options',
-              message: 'Select Dark or System theme',
-              primaryButton: {
-                text: 'Dark',
-                onPress: () => setThemeMode('dark'),
-              },
-              secondaryButton: {
-                text: 'System',
-                onPress: () => setThemeMode('system'),
-              },
-            });
-          }, 100);
-        },
-      },
-    });
-  };
-
-  const handlePinLengthChange = () => {
-    showAlert({
-      type: 'info',
-      title: 'PIN Length',
-      message: 'Choose your preferred PIN length',
-      primaryButton: {
-        text: '4 digits',
-        onPress: async () => {
-          try {
-            await updateAuthSettings({ pinLength: 4 });
-            toast.success('PIN Length Updated', 'Now using 4-digit PIN');
-          } catch (error) {
-            alert.error('Error', 'Failed to update PIN length');
-          }
+          hideAlert(); // Close PIN length alert first
+          handlePinLengthChangeWithNewPin(authState.pinLength === 4 ? 6 : 4);
         },
       },
       secondaryButton: {
-        text: '6 digits',
-        onPress: async () => {
-          try {
-            await updateAuthSettings({ pinLength: 6 });
-            toast.success('PIN Length Updated', 'Now using 6-digit PIN');
-          } catch (error) {
-            alert.error('Error', 'Failed to update PIN length');
-          }
-        },
+        text: 'Cancel',
+        onPress: () => hideAlert(),
       },
     });
   };
 
-  const handleChangePin = async () => {
-    if (newPin.length !== authState.pinLength) {
-      alert.error('Invalid PIN Length', `PIN must be ${authState.pinLength} digits`);
+  const handlePinLengthChangeWithNewPin = (newLength: 4 | 6) => {
+    if (newLength === authState.pinLength) {
+      toast.info('No Change Needed', `PIN length is already ${newLength} digits`);
       return;
     }
 
+    // Set target PIN length for this change
+    setTargetPinLength(newLength);
+    
+    // Reset PIN change form for new length
+    setCurrentPin('');
+    setNewPin('');
+    setConfirmPin('');
+    
+    // Small delay to ensure alert is closed before opening modal
+    setTimeout(() => {
+      setShowPinModal(true);
+      toast.info('Set New PIN', `Please set a new ${newLength}-digit PIN`);
+    }, 200);
+  };
+
+  const handleChangePin = async () => {
+    // Validation 1: Current PIN required
+    if (!currentPin.trim()) {
+      alert.error('Current PIN Required', 'Please enter your current PIN');
+      return;
+    }
+
+    if (currentPin.length !== authState.pinLength) {
+      alert.error('Invalid Current PIN', `Current PIN must be ${authState.pinLength} digits`);
+      return;
+    }
+
+    // Validation 2: New PIN length
+    const targetLength = getTargetPinLength();
+    if (newPin.length !== targetLength) {
+      alert.error('Invalid PIN Length', `New PIN must be exactly ${targetLength} digits`);
+      return;
+    }
+
+    // Validation 3: PIN confirmation match
     if (newPin !== confirmPin) {
-      alert.error('PIN Mismatch', 'PINs do not match. Please try again.');
+      alert.error('PIN Mismatch', 'New PIN and confirmation do not match');
+      return;
+    }
+
+    // Validation 4: New PIN different from current
+    if (currentPin === newPin) {
+      alert.error('Same PIN', 'New PIN must be different from current PIN');
       return;
     }
 
     try {
-      await updateAuthSettings({ pin: newPin });
-      setNewPin('');
-      setConfirmPin('');
-      setShowPinModal(false);
-      toast.success('PIN Updated!', 'Your PIN has been changed successfully');
+      const success = await changePin(currentPin, newPin);
+      
+      if (success) {
+        // Clear form and reset target length to new PIN length
+        setCurrentPin('');
+        setNewPin('');
+        setConfirmPin('');
+        setTargetPinLength(newPin.length as 4 | 6); // Reset to new current length
+        setShowPinModal(false);
+        
+        toast.success('PIN Updated!', `Your ${newPin.length}-digit PIN has been changed successfully`);
+      } else {
+        alert.error('Invalid Current PIN', 'The current PIN you entered is incorrect');
+      }
     } catch (error) {
-      alert.error('Error', 'Failed to change PIN');
+      alert.error('Error', 'Failed to change PIN. Please try again.');
     }
+  };
+
+  // Helper to determine target PIN length (for length changes)
+  const getTargetPinLength = (): 4 | 6 => {
+    // If changing PIN length, use target length, otherwise use current length
+    return targetPinLength !== authState.pinLength ? targetPinLength : authState.pinLength;
   };
 
   const handleChangeName = async () => {
@@ -235,7 +267,7 @@ export default function SettingsScreen() {
     }
 
     try {
-      await updateAuthSettings({ userName: newName.trim() });
+      await updateUserName(newName.trim());
       setShowNameModal(false);
       toast.success('Name Updated!', 'Your name has been updated successfully');
     } catch (error) {
@@ -250,7 +282,7 @@ export default function SettingsScreen() {
       } else {
         await biometric.disable();
       }
-      await updateAuthSettings({ biometricEnabled: enabled });
+      await updateUserPreferences({ biometricEnabled: enabled });
       toast.success('Biometric Settings Updated', `Biometric login ${enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
       alert.error('Error', 'Failed to update biometric settings');
@@ -476,7 +508,10 @@ export default function SettingsScreen() {
           subtitle: 'Update your security PIN',
           icon: 'lock-closed',
           type: 'navigation' as const,
-          onPress: () => setShowPinModal(true),
+          onPress: () => {
+            setTargetPinLength(authState.pinLength); // Reset to current length for normal PIN change
+            setShowPinModal(true);
+          },
         },
         {
           id: 'biometric',
@@ -508,14 +543,14 @@ export default function SettingsScreen() {
         {
           id: 'clear-data',
           title: 'Clear All Data',
-          subtitle: 'Delete all transactions, accounts, categories and debts',
+          subtitle: 'Reset app completely - deletes ALL data and returns to setup screen',
           icon: 'trash',
           type: 'action' as const,
           onPress: createSecureDeleteAction(
             'Clear All Data',
-            'This will delete ALL your data including transactions, accounts, categories, and debts. This action cannot be undone.',
-            () => database.clearAllData(),
-            'All data has been cleared successfully'
+            'This will completely reset the app - deleting ALL data (transactions, accounts, settings, PIN) and returning to setup screen. This action cannot be undone.',
+            () => resetApp(),
+            'App has been completely reset'
           ),
           destructive: true,
           requiresSecurity: true,
@@ -909,6 +944,51 @@ export default function SettingsScreen() {
       alignItems: 'center',
       marginTop: theme.spacing.lg,
     },
+    disabledButton: {
+      backgroundColor: theme.colors.surface,
+      opacity: 0.5,
+    },
+    disabledButtonText: {
+      color: theme.colors.textSecondary,
+    },
+    logoContainer: {
+      alignItems: 'center',
+      gap: theme.spacing.md,
+    },
+    // Theme Modal Styles
+    themeOptions: {
+      gap: theme.spacing.md,
+      marginBottom: theme.spacing.xl,
+    },
+    themeOption: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+    },
+    selectedThemeOption: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.primary + '10',
+    },
+    themeIconContainer: {
+      marginBottom: theme.spacing.md,
+    },
+    themeOptionText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: theme.spacing.xs,
+    },
+    selectedThemeText: {
+      color: theme.colors.primary,
+    },
+    themeOptionDescription: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
   });
 
   return (
@@ -926,8 +1006,10 @@ export default function SettingsScreen() {
         ))}
 
         <View style={styles.appInfo}>
-          <Text style={styles.appName}>FinancAAR</Text>
-          <Text style={styles.appVersion}>Version 1.0.0</Text>
+          <View style={styles.logoContainer}>
+            <AppLogo size="large" variant="text-only" showVersion={false} />
+            <Text style={styles.appVersion}>Version 1.0.0</Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -941,32 +1023,50 @@ export default function SettingsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Change PIN</Text>
+            <Text style={styles.modalSubtitle}>
+              Enter your current PIN and set a new {getTargetPinLength()}-digit PIN
+            </Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>New PIN ({authState.pinLength} digits)</Text>
+              <Text style={styles.inputLabel}>Current PIN ({authState.pinLength} digits)</Text>
               <TextInput
                 style={styles.input}
-                value={newPin}
-                onChangeText={setNewPin}
-                placeholder="Enter new PIN"
+                value={currentPin}
+                onChangeText={setCurrentPin}
+                placeholder={`Enter current ${authState.pinLength}-digit PIN`}
                 placeholderTextColor={theme.colors.textSecondary}
                 keyboardType="numeric"
                 secureTextEntry
                 maxLength={authState.pinLength}
+                autoFocus
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Confirm PIN</Text>
+              <Text style={styles.inputLabel}>New PIN ({getTargetPinLength()} digits)</Text>
+              <TextInput
+                style={styles.input}
+                value={newPin}
+                onChangeText={setNewPin}
+                placeholder={`Enter new ${getTargetPinLength()}-digit PIN`}
+                placeholderTextColor={theme.colors.textSecondary}
+                keyboardType="numeric"
+                secureTextEntry
+                maxLength={getTargetPinLength()}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Confirm New PIN</Text>
               <TextInput
                 style={styles.input}
                 value={confirmPin}
                 onChangeText={setConfirmPin}
-                placeholder="Confirm new PIN"
+                placeholder={`Confirm ${getTargetPinLength()}-digit PIN`}
                 placeholderTextColor={theme.colors.textSecondary}
                 keyboardType="numeric"
                 secureTextEntry
-                maxLength={authState.pinLength}
+                maxLength={getTargetPinLength()}
               />
             </View>
 
@@ -974,6 +1074,7 @@ export default function SettingsScreen() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
+                  setCurrentPin('');
                   setNewPin('');
                   setConfirmPin('');
                   setShowPinModal(false);
@@ -984,10 +1085,27 @@ export default function SettingsScreen() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
+                style={[
+                  styles.modalButton, 
+                  styles.confirmButton,
+                  (currentPin.length !== authState.pinLength || 
+                   newPin.length !== getTargetPinLength() || 
+                   confirmPin.length !== getTargetPinLength()) && styles.disabledButton
+                ]}
                 onPress={handleChangePin}
+                disabled={
+                  currentPin.length !== authState.pinLength || 
+                  newPin.length !== getTargetPinLength() || 
+                  confirmPin.length !== getTargetPinLength()
+                }
               >
-                <Text style={[styles.modalButtonText, styles.confirmButtonText]}>
+                <Text style={[
+                  styles.modalButtonText, 
+                  styles.confirmButtonText,
+                  (currentPin.length !== authState.pinLength || 
+                   newPin.length !== getTargetPinLength() || 
+                   confirmPin.length !== getTargetPinLength()) && styles.disabledButtonText
+                ]}>
                   Change PIN
                 </Text>
               </TouchableOpacity>
@@ -1279,6 +1397,107 @@ export default function SettingsScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Theme Selection Modal */}
+      <Modal
+        visible={showThemeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowThemeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Select Theme</Text>
+            <Text style={styles.modalSubtitle}>Choose your preferred theme</Text>
+
+            <View style={styles.themeOptions}>
+              <TouchableOpacity
+                style={[
+                  styles.themeOption,
+                  themeMode === 'light' && styles.selectedThemeOption
+                ]}
+                onPress={() => handleThemeSelect('light')}
+              >
+                <View style={styles.themeIconContainer}>
+                  <Ionicons 
+                    name="sunny" 
+                    size={32} 
+                    color={themeMode === 'light' ? theme.colors.primary : theme.colors.textSecondary} 
+                  />
+                </View>
+                <Text style={[
+                  styles.themeOptionText,
+                  themeMode === 'light' && styles.selectedThemeText
+                ]}>
+                  Light
+                </Text>
+                <Text style={styles.themeOptionDescription}>
+                  Bright and clean appearance
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.themeOption,
+                  themeMode === 'dark' && styles.selectedThemeOption
+                ]}
+                onPress={() => handleThemeSelect('dark')}
+              >
+                <View style={styles.themeIconContainer}>
+                  <Ionicons 
+                    name="moon" 
+                    size={32} 
+                    color={themeMode === 'dark' ? theme.colors.primary : theme.colors.textSecondary} 
+                  />
+                </View>
+                <Text style={[
+                  styles.themeOptionText,
+                  themeMode === 'dark' && styles.selectedThemeText
+                ]}>
+                  Dark
+                </Text>
+                <Text style={styles.themeOptionDescription}>
+                  Easy on the eyes, saves battery
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.themeOption,
+                  themeMode === 'system' && styles.selectedThemeOption
+                ]}
+                onPress={() => handleThemeSelect('system')}
+              >
+                <View style={styles.themeIconContainer}>
+                  <Ionicons 
+                    name="phone-portrait" 
+                    size={32} 
+                    color={themeMode === 'system' ? theme.colors.primary : theme.colors.textSecondary} 
+                  />
+                </View>
+                <Text style={[
+                  styles.themeOptionText,
+                  themeMode === 'system' && styles.selectedThemeText
+                ]}>
+                  System
+                </Text>
+                <Text style={styles.themeOptionDescription}>
+                  Follows your device settings
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton]}
+              onPress={() => setShowThemeModal(false)}
+            >
+              <Text style={[styles.modalButtonText, styles.cancelButtonText]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

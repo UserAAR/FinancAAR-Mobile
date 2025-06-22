@@ -496,6 +496,74 @@ class DatabaseService {
     db.runSync('DELETE FROM app_settings WHERE key = ?', ['setup_completed']);
   }
 
+  // User profile methods
+  setUserName(userName: string): void {
+    this.setSetting('user_name', userName);
+  }
+
+  getUserName(): string | null {
+    return this.getSetting('user_name');
+  }
+
+  clearUserName(): void {
+    const db = this.ensureDatabase();
+    db.runSync('DELETE FROM app_settings WHERE key = ?', ['user_name']);
+  }
+
+  // User preferences methods (Best Practice: Store in DB, not storage)
+  setUserPreferences(preferences: {
+    theme?: 'light' | 'dark' | 'system';
+    defaultCurrency?: string;
+    notifications?: boolean;
+    pinLength?: 4 | 6;
+    biometricEnabled?: boolean;
+  }): void {
+    Object.entries(preferences).forEach(([key, value]) => {
+      if (value !== undefined) {
+        this.setSetting(`pref_${key}`, String(value));
+      }
+    });
+  }
+
+  getUserPreferences(): {
+    theme: 'light' | 'dark' | 'system';
+    defaultCurrency: string;
+    notifications: boolean;
+    pinLength: 4 | 6;
+    biometricEnabled: boolean;
+  } {
+    return {
+      theme: (this.getSetting('pref_theme') as 'light' | 'dark' | 'system') || 'system',
+      defaultCurrency: this.getSetting('pref_defaultCurrency') || '₼',
+      notifications: this.getSetting('pref_notifications') !== 'false', // default true
+      pinLength: (parseInt(this.getSetting('pref_pinLength') || '4') as 4 | 6),
+      biometricEnabled: this.getSetting('pref_biometricEnabled') === 'true',
+    };
+  }
+
+  // Security settings (PIN should be in secure storage, but config in DB)
+  setPinLength(length: 4 | 6): void {
+    this.setSetting('pref_pinLength', String(length));
+  }
+
+  getPinLength(): 4 | 6 {
+    return (parseInt(this.getSetting('pref_pinLength') || '4') as 4 | 6);
+  }
+
+  setBiometricEnabled(enabled: boolean): void {
+    this.setSetting('pref_biometricEnabled', String(enabled));
+  }
+
+  getBiometricEnabled(): boolean {
+    return this.getSetting('pref_biometricEnabled') === 'true';
+  }
+
+  // Clear only user preferences, keep system settings
+  clearUserPreferences(): void {
+    const db = this.ensureDatabase();
+    db.runSync('DELETE FROM app_settings WHERE key LIKE ?', ['pref_%']);
+  }
+
   // Analytics operations
   getMonthlyData(months: number = 6): { month: string; income: number; expense: number; net: number }[] {
     const query = `
@@ -580,11 +648,18 @@ class DatabaseService {
 
   // Utility methods
   clearAllData(): void {
-    this.ensureDatabase().execSync('DELETE FROM transactions');
-    this.ensureDatabase().execSync('DELETE FROM debt_payments');
-    this.ensureDatabase().execSync('DELETE FROM debts');
-    this.ensureDatabase().execSync('DELETE FROM accounts');
-    this.ensureDatabase().execSync('DELETE FROM app_settings');
+    const db = this.ensureDatabase();
+    
+    // Clear all data tables
+    db.execSync('DELETE FROM transactions');
+    db.execSync('DELETE FROM debt_payments');
+    db.execSync('DELETE FROM debts');
+    db.execSync('DELETE FROM accounts');
+    db.execSync('DELETE FROM app_settings');
+    db.execSync('DELETE FROM categories');
+    
+    // Reset to fresh state
+    this.insertDefaultCategories();
   }
 
   clearTransactions(): void {

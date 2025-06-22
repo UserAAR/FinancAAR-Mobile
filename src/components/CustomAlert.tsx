@@ -132,17 +132,17 @@ export default function CustomAlert({
     container: {
       backgroundColor: theme.colors.background,
       borderRadius: theme.borderRadius.xl,
-      padding: theme.spacing.xl,
+      padding: theme.spacing.lg,
       marginHorizontal: theme.spacing.lg,
       maxWidth: width * 0.85,
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
-        height: 10,
+        height: 8,
       },
-      shadowOpacity: 0.25,
-      shadowRadius: 20,
-      elevation: 15,
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+      elevation: 12,
     },
     iconContainer: {
       alignItems: 'center',
@@ -173,24 +173,27 @@ export default function CustomAlert({
       paddingHorizontal: theme.spacing.lg,
       borderRadius: theme.borderRadius.lg,
       alignItems: 'center',
+      justifyContent: 'center',
     },
     primaryButton: {
       backgroundColor: theme.colors.primary,
     },
     secondaryButton: {
       backgroundColor: theme.colors.surface,
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.colors.border,
     },
     buttonText: {
       fontSize: 16,
       fontWeight: '600',
+      letterSpacing: 0.2,
+      textAlign: 'center',
     },
     primaryButtonText: {
       color: 'white',
     },
     secondaryButtonText: {
-      color: theme.colors.text,
+      color: theme.colors.textSecondary,
     },
     singleButton: {
       width: '100%',

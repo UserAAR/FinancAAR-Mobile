@@ -1,11 +1,5 @@
-// Authentication Types
-export interface AuthState {
-  isAuthenticated: boolean;
-  pinSet: boolean;
-  biometricEnabled: boolean;
-  pinLength: 4 | 6;
-  userName: string;
-}
+// Authentication Types (Moved to AuthContext for better encapsulation)
+// Legacy types removed - now defined in AuthContext
 
 // Account Types
 export interface CashAccount {
@@ -178,15 +172,8 @@ export interface ErrorState {
   message?: string;
 }
 
-// Settings Types
-export interface AppSettings {
-  pinLength: 4 | 6;
-  biometricEnabled: boolean;
-  theme: ThemeMode;
-  userName: string;
-  defaultCurrency: string;
-  notifications: boolean;
-}
+// Settings Types (Moved to AuthContext for better encapsulation)
+// Legacy AppSettings removed - now defined in AuthContext as UserPreferences
 
 // Database Types
 export interface DatabaseAccount {

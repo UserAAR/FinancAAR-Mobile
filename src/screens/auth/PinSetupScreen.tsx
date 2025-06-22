@@ -21,7 +21,7 @@ type SetupStep = 'name' | 'pin' | 'confirm' | 'biometric' | 'cash' | 'cards';
 
 export default function PinSetupScreen() {
   const { theme } = useTheme();
-  const { setupPin, updateAuthSettings, authenticateWithPin } = useAuth();
+  const { setupPin, updateUserPreferences, authenticateWithPin, completeSetup } = useAuth();
   const biometric = useBiometric();
   const alert = useAlert();
   
@@ -132,23 +132,24 @@ export default function PinSetupScreen() {
         await database.createAccount(cardAccountData);
       }
       
-      // Now setup PIN and complete the setup process
+      // CRITICAL: Setup PIN and mark as completed BEFORE any authentication
       await setupPin(pin, userName.trim(), false);
       
       // Enable biometric if user chose to
       if (biometricPreference && biometric.canUseBiometric) {
         try {
-          await updateAuthSettings({ biometricEnabled: true });
+          await updateUserPreferences({ biometricEnabled: true });
         } catch (error) {
           console.log('Biometric setup failed, continuing without it');
         }
       }
       
-      // Mark setup as complete in database
-      database.setSetupCompleted();
-      
-      // Mark setup as complete in context
+      // Complete setup and clear flags
+      completeSetup();
       setIsSetupComplete(true);
+      
+      // Small delay to ensure all setup operations are completed
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Finally authenticate user to enter the app
       await authenticateWithPin(pin);

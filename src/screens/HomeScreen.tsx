@@ -19,6 +19,7 @@ import { database } from '../utils/database';
 import { Account, Transaction } from '../types';
 import AccountCard from '../components/AccountCard';
 import QuickStats from '../components/QuickStats';
+import AppLogo from '../components/AppLogo';
 
 const { width } = Dimensions.get('window');
 

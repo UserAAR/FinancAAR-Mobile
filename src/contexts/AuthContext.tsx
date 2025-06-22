@@ -1,14 +1,36 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import { AuthState, AppSettings } from '../types';
+import React, { createContext, useContext, useEffect, useReducer, useState, ReactNode, useCallback } from 'react';
+import * as Crypto from 'expo-crypto';
 import { useSecureStorage, storeObject, getObject } from '../hooks/useSecureStorage';
 import { useBiometric } from '../hooks/useBiometric';
 import { database } from '../utils/database';
-import * as Crypto from 'expo-crypto';
+
+// Best Practice: Separate types for different concerns
+interface AuthState {
+  isAuthenticated: boolean;
+  pinSet: boolean;
+  userName: string;
+  pinLength: 4 | 6;
+  biometricEnabled: boolean;
+}
+
+interface UserPreferences {
+  theme: 'light' | 'dark' | 'system';
+  defaultCurrency: string;
+  notifications: boolean;
+  pinLength: 4 | 6;
+  biometricEnabled: boolean;
+}
+
+// Best Practice: Simplified AppSettings for non-critical data only
+interface AppSettings {
+  lastSyncDate?: string;
+  appVersion?: string;
+  // Keep only non-critical, runtime-specific settings here
+}
 
 interface AuthContextType {
   authState: AuthState;
-  appSettings: AppSettings;
+  userPreferences: UserPreferences;
   isLoading: boolean;
   
   // Authentication methods
@@ -17,11 +39,8 @@ interface AuthContextType {
   changePin: (currentPin: string, newPin: string) => Promise<boolean>;
   authenticateWithBiometric: () => Promise<{ success: boolean; error?: string }>;
   
-  // Settings methods
-  updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
-  updateAuthSettings: (settings: Partial<{ pin: string; userName: string; pinLength: 4 | 6; biometricEnabled: boolean }>) => Promise<void>;
-  toggleBiometric: () => Promise<void>;
-  changePinLength: (newLength: 4 | 6) => Promise<void>;
+  // User preferences methods (Best Practice: Direct DB access)
+  updateUserPreferences: (preferences: Partial<UserPreferences>) => Promise<void>;
   updateUserName: (name: string) => Promise<void>;
   
   // Setup methods
@@ -39,95 +58,85 @@ interface AuthContextType {
   };
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 const defaultAuthState: AuthState = {
   isAuthenticated: false,
   pinSet: false,
-  biometricEnabled: false,
-  pinLength: 4,
   userName: '',
+  pinLength: 4,
+  biometricEnabled: false,
+};
+
+const defaultUserPreferences: UserPreferences = {
+  theme: 'system',
+  defaultCurrency: '₼',
+  notifications: true,
+  pinLength: 4,
+  biometricEnabled: false,
 };
 
 const defaultAppSettings: AppSettings = {
-  pinLength: 4,
-  biometricEnabled: false,
-  theme: 'system',
-  userName: '',
-  defaultCurrency: '₼',
-  notifications: true,
+  lastSyncDate: new Date().toISOString(),
+  appVersion: '1.0.0',
 };
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  // Best Practice: Separate state management
   const [authState, setAuthState] = useState<AuthState>(defaultAuthState);
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>(defaultUserPreferences);
   const [appSettings, setAppSettings] = useState<AppSettings>(defaultAppSettings);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSetupInProgress, setIsSetupInProgress] = useState(false);
 
+  // Best Practice: Only PIN in secure storage (most critical security data)
   const [pinState, setPinStorage] = useSecureStorage('auth_pin');
-  const [settingsState, setSettingsStorage] = useSecureStorage('auth_settings');
-
   const biometric = useBiometric();
 
-  // Extract loading states and values
   const [pinLoading, storedPin] = pinState;
-  const [settingsLoading, settingsStorage] = settingsState;
 
-  // Initialize auth state from storage
+  // Best Practice: Initialize from database (persistent) and cache in memory
   useEffect(() => {
-    // Wait for both storages to load before initializing
-    if (!pinLoading && !settingsLoading) {
+    if (!pinLoading) {
       initializeAuth();
     }
-  }, [pinLoading, settingsLoading]);
+  }, [pinLoading]);
 
-  const initializeAuth = async () => {
+  const initializeAuth = useCallback(async () => {
     try {
       setIsLoading(true);
       
-      // If we already have userName in memory and setup is completed, don't reload from storage
-      if (appSettings.userName && appSettings.userName.trim() && database.isSetupCompleted()) {
-        setAuthState(prev => ({
-          ...prev,
-          biometricEnabled: appSettings.biometricEnabled,
-          pinLength: appSettings.pinLength,
-          userName: appSettings.userName,
-          pinSet: !!storedPin && database.isSetupCompleted(),
-        }));
+      if (isSetupInProgress) {
         return;
       }
+
+      // Best Practice: Load all user data from database (persistent across app kills)
+      const dbUserName = database.getUserName();
+      const dbPreferences = database.getUserPreferences();
       
-      // Always load settings from storage to get the latest data
-      const storedSettings = await getObject<AppSettings>('app_settings');
+      // Best Practice: Cache in memory for performance
+      setUserPreferences(dbPreferences);
       
-      if (storedSettings) {
-        // Update app settings
-        setAppSettings(storedSettings);
-        
-        // Update auth state with stored settings
-        setAuthState(prev => ({
-          ...prev,
-          biometricEnabled: storedSettings.biometricEnabled || false,
-          pinLength: storedSettings.pinLength || 4,
-          userName: storedSettings.userName || '',
-          pinSet: !!storedPin && database.isSetupCompleted(),
-        }));
-      } else {
-        // No stored settings, check if setup is completed
-        setAuthState(prev => ({
-          ...prev,
-          pinSet: !!storedPin && database.isSetupCompleted(),
-        }));
-      }
+      const setupCompleted = database.isSetupCompleted();
+      
+      setAuthState(prev => ({
+        ...prev,
+        userName: dbUserName || '',
+        pinLength: dbPreferences.pinLength,
+        biometricEnabled: dbPreferences.biometricEnabled,
+        pinSet: !!storedPin && setupCompleted,
+      }));
+
     } catch (error) {
       console.error('Error initializing auth:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [storedPin, isSetupInProgress]);
 
   const hashPin = async (pin: string): Promise<string> => {
     return await Crypto.digestStringAsync(
@@ -138,31 +147,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const setupPin = async (pin: string, userName: string, authenticate: boolean = true): Promise<void> => {
     try {
+      setIsSetupInProgress(true);
+      
       const hashedPin = await hashPin(pin);
+      
+      // Best Practice: Critical security data in secure storage
       setPinStorage(hashedPin);
 
-      const newSettings: AppSettings = {
-        ...appSettings,
+      // Best Practice: User data in database (persistent)
+      database.setUserName(userName.trim());
+      database.setUserPreferences({
         pinLength: pin.length as 4 | 6,
-        userName: userName.trim(),
-      };
-      
-      // Save to storage and update local state
-      await storeObject('app_settings', newSettings);
-      setAppSettings(newSettings);
+        biometricEnabled: false, // Default to false, user can enable later
+      });
 
-      // Update auth state with new values
+      // Best Practice: Update memory cache immediately
+      const newPreferences = {
+        ...userPreferences,
+        pinLength: pin.length as 4 | 6,
+      };
+      setUserPreferences(newPreferences);
+
       setAuthState(prev => ({
         ...prev,
         pinSet: true,
         pinLength: pin.length as 4 | 6,
         userName: userName.trim(),
         isAuthenticated: authenticate,
-        biometricEnabled: newSettings.biometricEnabled,
+        biometricEnabled: false,
       }));
       
-      // Small delay to ensure storage write is completed
-      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error('Error setting up PIN:', error);
       throw error;
@@ -175,6 +189,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       ...prev,
       pinSet: true,
     }));
+    
+    setIsSetupInProgress(false);
   };
 
   const authenticateWithPin = async (pin: string): Promise<boolean> => {
@@ -202,24 +218,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const changePin = async (currentPin: string, newPin: string): Promise<boolean> => {
     try {
-      // Verify current PIN first
       const isCurrentValid = await authenticateWithPin(currentPin);
       if (!isCurrentValid) {
         return false;
       }
 
-      // Set new PIN
       const hashedNewPin = await hashPin(newPin);
       setPinStorage(hashedNewPin);
 
-      // Update settings
-      const newSettings: AppSettings = {
-        ...appSettings,
+      // Best Practice: Update database preferences
+      database.setPinLength(newPin.length as 4 | 6);
+      
+      // Update memory cache
+      const newPreferences = {
+        ...userPreferences,
         pinLength: newPin.length as 4 | 6,
       };
-
-      await storeObject('app_settings', newSettings);
-      setAppSettings(newSettings);
+      setUserPreferences(newPreferences);
 
       setAuthState(prev => ({
         ...prev,
@@ -234,7 +249,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const authenticateWithBiometric = async (): Promise<{ success: boolean; error?: string }> => {
-    if (!appSettings.biometricEnabled || !biometric.canUseBiometric) {
+    if (!userPreferences.biometricEnabled || !biometric.canUseBiometric) {
       return {
         success: false,
         error: 'Biometric authentication is not enabled or available',
@@ -253,64 +268,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return result;
   };
 
-  const updateSettings = async (newSettings: Partial<AppSettings>): Promise<void> => {
+  // Best Practice: Direct database operations for user preferences
+  const updateUserPreferences = async (preferences: Partial<UserPreferences>): Promise<void> => {
     try {
-      const updatedSettings = { ...appSettings, ...newSettings };
-      await storeObject('app_settings', updatedSettings);
-      setAppSettings(updatedSettings);
+      // Update database (persistent)
+      database.setUserPreferences(preferences);
+      
+      // Update memory cache (performance)
+      const newPreferences = { ...userPreferences, ...preferences };
+      setUserPreferences(newPreferences);
 
-      // Update auth state if necessary
-      setAuthState(prev => ({
-        ...prev,
-        biometricEnabled: updatedSettings.biometricEnabled,
-        pinLength: updatedSettings.pinLength,
-        userName: updatedSettings.userName,
-      }));
+      // Update auth state if needed
+      if (preferences.biometricEnabled !== undefined || preferences.pinLength !== undefined) {
+        setAuthState(prev => ({
+          ...prev,
+          biometricEnabled: newPreferences.biometricEnabled,
+          pinLength: newPreferences.pinLength,
+        }));
+      }
     } catch (error) {
-      console.error('Error updating settings:', error);
+      console.error('Error updating user preferences:', error);
       throw error;
     }
-  };
-
-  const updateAuthSettings = async (settings: Partial<{ pin: string; userName: string; pinLength: 4 | 6; biometricEnabled: boolean }>): Promise<void> => {
-    try {
-      const updatedSettings = { ...appSettings, ...settings };
-      await storeObject('app_settings', updatedSettings);
-      setAppSettings(updatedSettings);
-
-      // Update auth state if necessary
-      setAuthState(prev => ({
-        ...prev,
-        biometricEnabled: updatedSettings.biometricEnabled,
-        pinLength: updatedSettings.pinLength,
-        userName: updatedSettings.userName,
-      }));
-    } catch (error) {
-      console.error('Error updating auth settings:', error);
-      throw error;
-    }
-  };
-
-  const toggleBiometric = async (): Promise<void> => {
-    if (!biometric.canUseBiometric) {
-      throw new Error('Biometric authentication is not available on this device');
-    }
-
-    await updateAuthSettings({
-      biometricEnabled: !appSettings.biometricEnabled,
-    });
-  };
-
-  const changePinLength = async (newLength: 4 | 6): Promise<void> => {
-    await updateAuthSettings({
-      pinLength: newLength,
-    });
   };
 
   const updateUserName = async (name: string): Promise<void> => {
-    await updateAuthSettings({
-      userName: name,
-    });
+    // Best Practice: Direct database operation
+    database.setUserName(name.trim());
+    
+    // Update memory cache
+    setAuthState(prev => ({
+      ...prev,
+      userName: name.trim(),
+    }));
   };
 
   const logout = (): void => {
@@ -322,16 +312,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const resetApp = async (): Promise<void> => {
     try {
-      // Clear all stored data
+      // Clear secure storage (PIN)
       setPinStorage(null);
-      setSettingsStorage(null);
-      await storeObject('app_settings', null);
       
-      // Clear setup flag from database
-      database.clearSetupFlag();
+      // Clear database completely
+      database.clearAllData();
 
-      // Reset states
+      // Reset memory state
       setAuthState(defaultAuthState);
+      setUserPreferences(defaultUserPreferences);
       setAppSettings(defaultAppSettings);
     } catch (error) {
       console.error('Error resetting app:', error);
@@ -339,9 +328,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  // Best Practice: Convenience methods
+  const toggleBiometric = async (): Promise<void> => {
+    if (!biometric.canUseBiometric) {
+      throw new Error('Biometric authentication is not available on this device');
+    }
+
+    await updateUserPreferences({
+      biometricEnabled: !userPreferences.biometricEnabled,
+    });
+  };
+
+  const changePinLength = async (newLength: 4 | 6): Promise<void> => {
+    await updateUserPreferences({
+      pinLength: newLength,
+    });
+  };
+
   const value: AuthContextType = {
     authState,
-    appSettings,
+    userPreferences,
     isLoading,
     
     // Authentication methods
@@ -350,11 +356,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     changePin,
     authenticateWithBiometric,
     
-    // Settings methods
-    updateSettings,
-    updateAuthSettings,
-    toggleBiometric,
-    changePinLength,
+    // User preferences methods
+    updateUserPreferences,
     updateUserName,
     
     // Setup methods
