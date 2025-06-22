@@ -144,7 +144,10 @@ export default function PinSetupScreen() {
         }
       }
       
-      // Mark setup as complete
+      // Mark setup as complete in database
+      database.setSetupCompleted();
+      
+      // Mark setup as complete in context
       setIsSetupComplete(true);
       
       // Finally authenticate user to enter the app

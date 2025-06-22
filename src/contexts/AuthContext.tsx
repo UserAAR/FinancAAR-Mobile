@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { AuthState, AppSettings } from '../types';
 import { useSecureStorage, storeObject, getObject } from '../hooks/useSecureStorage';
 import { useBiometric } from '../hooks/useBiometric';
+import { database } from '../utils/database';
 import * as Crypto from 'expo-crypto';
 
 interface AuthContextType {
@@ -22,6 +23,9 @@ interface AuthContextType {
   toggleBiometric: () => Promise<void>;
   changePinLength: (newLength: 4 | 6) => Promise<void>;
   updateUserName: (name: string) => Promise<void>;
+  
+  // Setup methods
+  completeSetup: () => void;
   
   // Logout and reset
   logout: () => void;
@@ -63,15 +67,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [appSettings, setAppSettings] = useState<AppSettings>(defaultAppSettings);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [pinStorage, setPinStorage] = useSecureStorage('auth_pin');
-  const [settingsStorage, setSettingsStorage] = useSecureStorage('auth_settings');
+  const [pinState, setPinStorage] = useSecureStorage('auth_pin');
+  const [settingsState, setSettingsStorage] = useSecureStorage('auth_settings');
 
   const biometric = useBiometric();
 
+  // Extract loading states and values
+  const [pinLoading, storedPin] = pinState;
+  const [settingsLoading, settingsStorage] = settingsState;
+
   // Initialize auth state from storage
   useEffect(() => {
-    initializeAuth();
-  }, []);
+    // Wait for both storages to load before initializing
+    if (!pinLoading && !settingsLoading) {
+      initializeAuth();
+    }
+  }, [pinLoading, settingsLoading, storedPin, settingsStorage]);
 
   const initializeAuth = async () => {
     try {
@@ -81,19 +92,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const storedSettings = await getObject<AppSettings>('app_settings');
       if (storedSettings) {
         setAppSettings(storedSettings);
-      }
-
-      // Check if PIN is set
-      const [pinLoading, storedPin] = pinStorage;
-      if (!pinLoading) {
-        const pinSet = !!storedPin;
         
+        // Update auth state with stored settings
         setAuthState(prev => ({
           ...prev,
-          pinSet,
-          biometricEnabled: storedSettings?.biometricEnabled || false,
-          pinLength: storedSettings?.pinLength || 4,
-          userName: storedSettings?.userName || '',
+          biometricEnabled: storedSettings.biometricEnabled || false,
+          pinLength: storedSettings.pinLength || 4,
+          userName: storedSettings.userName || '',
+          pinSet: !!storedPin && database.isSetupCompleted(),
+        }));
+      } else {
+        // Check if PIN is set and setup is completed
+        setAuthState(prev => ({
+          ...prev,
+          pinSet: !!storedPin && database.isSetupCompleted(),
         }));
       }
     } catch (error) {
@@ -118,7 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const newSettings: AppSettings = {
         ...appSettings,
         pinLength: pin.length as 4 | 6,
-        userName,
+        userName: userName.trim(),
       };
 
       await storeObject('app_settings', newSettings);
@@ -128,7 +140,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ...prev,
         pinSet: true,
         pinLength: pin.length as 4 | 6,
-        userName,
+        userName: userName.trim(),
         isAuthenticated: authenticate,
       }));
     } catch (error) {
@@ -137,9 +149,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const completeSetup = (): void => {
+    database.setSetupCompleted();
+    setAuthState(prev => ({
+      ...prev,
+      pinSet: true,
+    }));
+  };
+
   const authenticateWithPin = async (pin: string): Promise<boolean> => {
     try {
-      const [, storedPin] = pinStorage;
       if (!storedPin) {
         return false;
       }
@@ -287,6 +306,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setPinStorage(null);
       setSettingsStorage(null);
       await storeObject('app_settings', null);
+      
+      // Clear setup flag from database
+      database.clearSetupFlag();
 
       // Reset states
       setAuthState(defaultAuthState);
@@ -314,6 +336,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     toggleBiometric,
     changePinLength,
     updateUserName,
+    
+    // Setup methods
+    completeSetup,
     
     // Logout and reset
     logout,

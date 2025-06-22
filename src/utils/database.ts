@@ -472,11 +472,28 @@ class DatabaseService {
   }
 
   getSetting(key: string): string | null {
-    const result = this.ensureDatabase().getFirstSync(
+    const db = this.ensureDatabase();
+    const result = db.getFirstSync(
       'SELECT value FROM app_settings WHERE key = ?',
       [key]
     ) as { value: string } | null;
-    return result?.value || null;
+    
+    return result ? result.value : null;
+  }
+
+  // Setup tracking methods
+  setSetupCompleted(): void {
+    this.setSetting('setup_completed', 'true');
+  }
+
+  isSetupCompleted(): boolean {
+    const result = this.getSetting('setup_completed');
+    return result === 'true';
+  }
+
+  clearSetupFlag(): void {
+    const db = this.ensureDatabase();
+    db.runSync('DELETE FROM app_settings WHERE key = ?', ['setup_completed']);
   }
 
   // Analytics operations
