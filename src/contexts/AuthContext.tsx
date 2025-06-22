@@ -88,6 +88,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true);
       
+      // If we already have userName in memory and setup is completed, don't reload from storage
+      if (appSettings.userName && appSettings.userName.trim() && database.isSetupCompleted()) {
+        setAuthState(prev => ({
+          ...prev,
+          biometricEnabled: appSettings.biometricEnabled,
+          pinLength: appSettings.pinLength,
+          userName: appSettings.userName,
+          pinSet: !!storedPin && database.isSetupCompleted(),
+        }));
+        return;
+      }
+      
       // Always load settings from storage to get the latest data
       const storedSettings = await getObject<AppSettings>('app_settings');
       
