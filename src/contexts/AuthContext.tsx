@@ -82,15 +82,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!pinLoading && !settingsLoading) {
       initializeAuth();
     }
-  }, [pinLoading, settingsLoading, storedPin, settingsStorage]);
+  }, [pinLoading, settingsLoading]);
 
   const initializeAuth = async () => {
     try {
       setIsLoading(true);
       
-      // Load settings from storage
+      // Always load settings from storage to get the latest data
       const storedSettings = await getObject<AppSettings>('app_settings');
+      
       if (storedSettings) {
+        // Update app settings
         setAppSettings(storedSettings);
         
         // Update auth state with stored settings
@@ -102,7 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           pinSet: !!storedPin && database.isSetupCompleted(),
         }));
       } else {
-        // Check if PIN is set and setup is completed
+        // No stored settings, check if setup is completed
         setAuthState(prev => ({
           ...prev,
           pinSet: !!storedPin && database.isSetupCompleted(),
@@ -132,17 +134,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
         pinLength: pin.length as 4 | 6,
         userName: userName.trim(),
       };
-
+      
+      // Save to storage and update local state
       await storeObject('app_settings', newSettings);
       setAppSettings(newSettings);
 
+      // Update auth state with new values
       setAuthState(prev => ({
         ...prev,
         pinSet: true,
         pinLength: pin.length as 4 | 6,
         userName: userName.trim(),
         isAuthenticated: authenticate,
+        biometricEnabled: newSettings.biometricEnabled,
       }));
+      
+      // Small delay to ensure storage write is completed
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error('Error setting up PIN:', error);
       throw error;
