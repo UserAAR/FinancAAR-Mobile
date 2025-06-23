@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
+import { LineChart } from 'react-native-chart-kit';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, CURRENCY_SYMBOL } from '../utils/currency';
@@ -20,7 +20,11 @@ import { MonthlyData, CategorySpending, Transaction, Account } from '../types';
 const { width: screenWidth } = Dimensions.get('window');
 const chartWidth = screenWidth - 32;
 
-export default function AnalyticsScreen() {
+interface AnalyticsScreenProps {
+  navigation?: any;
+}
+
+export default function AnalyticsScreen({ navigation }: AnalyticsScreenProps) {
   const { theme } = useTheme();
   const { authState } = useAuth();
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
@@ -47,12 +51,14 @@ export default function AnalyticsScreen() {
       const allTransactions = database.getTransactions();
       const allAccounts = database.getAccounts();
       
+
+      
       setMonthlyData(monthData);
       setCategoryData(catData);
       setTransactions(allTransactions);
       setAccounts(allAccounts);
     } catch (error) {
-      console.error('Error loading analytics data:', error);
+      // Error handled silently for production
     } finally {
       setIsLoading(false);
     }
@@ -64,124 +70,92 @@ export default function AnalyticsScreen() {
     setRefreshing(false);
   };
 
-  // Enhanced chart data with better colors and formatting
-  const getIncomeExpenseChartData = () => {
-    if (!monthlyData.length) {
-      // Show sample data instead of empty chart
-      return {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [
-          { 
-            data: [100, 150, 200, 180, 250, 300], 
-            color: () => theme.colors.success,
-            strokeWidth: 3
-          },
-          { 
-            data: [80, 120, 160, 140, 200, 240], 
-            color: () => theme.colors.error,
-            strokeWidth: 3
-          }
-        ],
-        legend: ['Income', 'Expenses']
-      };
-    }
-
-    // Ensure all values are positive and handle zero values
-    const incomeData = monthlyData.map(d => Math.max(d.income, 1));
-    const expenseData = monthlyData.map(d => Math.max(d.expense, 1));
-
+  // Advanced Chart with Rich Financial Analytics
+  const getAdvancedChartData = () => {
+    const days = selectedPeriod === '6month' ? 180 : selectedPeriod === '3month' ? 90 : 365;
+    const chartData = database.getDailyChartData(days);
+    
+    // Only use real data - no fake defaults
+    const ensureValidData = (data: number[]) => {
+      if (!data || data.length === 0) return [];
+      return data.map(val => typeof val === 'number' && !isNaN(val) ? val : 0);
+    };
+    
     return {
-      labels: monthlyData.map(d => d.month.slice(0, 3)),
+      labels: chartData.labels,
       datasets: [
         {
-          data: incomeData,
-          color: () => theme.colors.success,
-          strokeWidth: 3
+          data: ensureValidData(chartData.datasets.savingsRates),
+          color: () => '#00D2AA', // Primary teal
+          strokeWidth: 4,
         },
         {
-          data: expenseData,
-          color: () => theme.colors.error,
-          strokeWidth: 3
-        }
+          data: ensureValidData(chartData.datasets.netSavingsScaled),
+          color: () => '#4CAF50', // Green
+          strokeWidth: 3,
+        },
+        {
+          data: ensureValidData(chartData.datasets.incomeProgress),
+          color: () => '#2196F3', // Blue
+          strokeWidth: 3,
+        },
+        {
+          data: ensureValidData(chartData.datasets.expenseProgress),
+          color: () => '#FF9800', // Orange
+          strokeWidth: 3,
+        },
+        {
+          data: ensureValidData(chartData.datasets.targetLine),
+          color: () => '#F44336', // Red
+          strokeWidth: 2,
+          withDots: false,
+        },
       ],
-      legend: ['Income', 'Expenses']
+      legend: [],
+      metadata: chartData.metadata,
     };
-  };
-
-  const getNetSavingsChartData = () => {
-    if (!monthlyData.length) {
-      return {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [{ data: [0, 0, 0, 0, 0, 0] }]
-      };
-    }
-
-    const netData = monthlyData.map(d => d.income - d.expense);
-    return {
-      labels: monthlyData.map(d => d.month.slice(0, 3)),
-      datasets: [{
-        data: netData,
-        color: () => theme.colors.primary,
-        strokeWidth: 4
-      }]
-    };
-  };
-
-  const getCategoryPieData = () => {
-    if (!categoryData.length) {
-      return [{
-        name: 'No Expenses',
-        amount: 1,
-        color: theme.colors.surface,
-        legendFontColor: theme.colors.textSecondary,
-        legendFontSize: 12
-      }];
-    }
-
-    const colors = [
-      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', 
-      '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
-    ];
-
-    return categoryData.slice(0, 8).map((cat, index) => ({
-      name: cat.name,
-      amount: cat.totalSpent,
-      color: colors[index % colors.length],
-      legendFontColor: theme.colors.text,
-      legendFontSize: 11
-    }));
-  };
-
-  // New: Account balance distribution
-  const getAccountBalanceData = () => {
-    if (!accounts.length) return [];
-    
-    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
-    
-    return accounts.filter(acc => acc.balance > 0).map((account, index) => ({
-      name: account.name,
-      amount: account.balance,
-      color: colors[index % colors.length],
-      legendFontColor: theme.colors.text,
-      legendFontSize: 11
-    }));
   };
 
   const chartConfig = {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: 'transparent',
     backgroundGradientFrom: theme.colors.surface,
     backgroundGradientTo: theme.colors.surface,
-    decimalPlaces: 0,
+    decimalPlaces: 1,
     color: (opacity = 1) => `rgba(0, 210, 170, ${opacity})`,
     labelColor: () => theme.colors.text,
     style: {
       borderRadius: 16,
+      paddingRight: 40,
+      paddingLeft: 8,
     },
     propsForLabels: {
-      fontSize: 11,
+      fontSize: 8,
+      fontWeight: '500',
     },
     propsForVerticalLabels: {
-      fontSize: 10,
+      fontSize: 8,
+      fontWeight: '500',
+      rotation: 0,
+    },
+    propsForHorizontalLabels: {
+      fontSize: 8,
+      fontWeight: '500',
+    },
+    strokeWidth: 2,
+    useShadowColorFromDataset: true,
+    fillShadowGradient: theme.colors.primary,
+    fillShadowGradientOpacity: 0.05,
+    withShadow: false,
+    withInnerLines: true,
+    withOuterLines: false,
+    withVerticalLines: false,
+    withHorizontalLines: true,
+    segments: 6,
+    formatYLabel: (value: string) => {
+      const num = parseFloat(value);
+      if (num >= 100) return `${Math.round(num)}`;
+      if (num >= 10) return `${num.toFixed(0)}`;
+      return `${num.toFixed(1)}`;
     },
   };
 
@@ -275,11 +249,13 @@ export default function AnalyticsScreen() {
       marginBottom: theme.spacing.lg,
       padding: theme.spacing.lg,
       ...theme.shadows?.medium,
+      borderWidth: 1,
+      borderColor: theme.colors.border + '30',
     },
     chartHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
     },
     chartIcon: {
       backgroundColor: theme.colors.primary + '15',
@@ -288,19 +264,76 @@ export default function AnalyticsScreen() {
       marginRight: theme.spacing.md,
     },
     chartTitle: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 18,
+      fontWeight: '700',
       color: theme.colors.text,
       flex: 1,
     },
-    insightCard: {
+    chartSubtitle: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      marginTop: theme.spacing.xs,
+      marginBottom: theme.spacing.lg,
+      lineHeight: 18,
+      fontWeight: '500',
+    },
+    aiAnalysisCard: {
       backgroundColor: theme.colors.primary + '10',
       borderRadius: theme.borderRadius.lg,
       padding: theme.spacing.lg,
       marginHorizontal: theme.spacing.lg,
       marginBottom: theme.spacing.lg,
+      borderWidth: 2,
+      borderColor: theme.colors.primary + '30',
+      ...theme.shadows?.medium,
+    },
+    aiHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    aiIcon: {
+      backgroundColor: theme.colors.primary + '20',
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.sm,
+      marginRight: theme.spacing.md,
+    },
+    aiTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.colors.text,
+      flex: 1,
+    },
+    aiSubtitle: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.md,
+      lineHeight: 20,
+    },
+    aiButton: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: theme.borderRadius.lg,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...theme.shadows?.small,
+    },
+    aiButtonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '600',
+      marginLeft: theme.spacing.sm,
+    },
+    insightCard: {
+      backgroundColor: theme.colors.success + '10',
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      marginHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
       borderLeftWidth: 4,
-      borderLeftColor: theme.colors.primary,
+      borderLeftColor: theme.colors.success,
     },
     insightTitle: {
       fontSize: 16,
@@ -326,19 +359,80 @@ export default function AnalyticsScreen() {
       marginTop: theme.spacing.md,
       lineHeight: 24,
     },
+    chartInsights: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.md,
+      padding: theme.spacing.sm,
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.md,
+    },
+    insightRow: {
+      alignItems: 'center',
+    },
+    insightLabel: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      fontWeight: '500',
+    },
+    insightValue: {
+      fontSize: 12,
+      fontWeight: '700',
+      marginTop: 2,
+    },
+    chartLegend: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      marginTop: theme.spacing.sm,
+      paddingTop: theme.spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border + '30',
+    },
+    legendRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.xs,
+      width: '48%',
+    },
+    legendDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: theme.spacing.xs,
+    },
+    legendText: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      fontWeight: '500',
+    },
   });
 
-  // Calculate insights
-  const totalIncome = monthlyData.reduce((sum, month) => sum + month.income, 0);
-  const totalExpense = monthlyData.reduce((sum, month) => sum + month.expense, 0);
-  const netSavings = totalIncome - totalExpense;
+  // Calculate insights using mathematically correct formulas
+  const months = selectedPeriod === '6month' ? 6 : selectedPeriod === '3month' ? 3 : 12;
+  
+  // Get accurate financial calculations
+  const savingsCalculation = database.calculateSavingsRate(months);
+  const advancedAnalytics = database.getAdvancedAnalytics();
+  
+  // Use correct calculations
+  const { savingsRate, netSavings, totalIncome, cashFlowSavingsRate } = savingsCalculation;
+  const totalExpense = totalIncome - (cashFlowSavingsRate / 100 * totalIncome);
   const avgMonthlyIncome = monthlyData.length ? totalIncome / monthlyData.length : 0;
   const avgMonthlyExpense = monthlyData.length ? totalExpense / monthlyData.length : 0;
   const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
-  const savingsRate = totalIncome > 0 ? ((netSavings / totalIncome) * 100) : 0;
   
   const topCategory = categoryData.length > 0 ? categoryData[0] : null;
   const transactionCount = transactions.length;
+  
+  // Financial Health Score
+  const healthScore = advancedAnalytics.summary.financialHealthScore;
+
+  const handleAIAnalysis = () => {
+    if (navigation) {
+      navigation.navigate('AIAnalysis');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -360,7 +454,7 @@ export default function AnalyticsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.greeting}>Analytics</Text>
-          <Text style={styles.subtitle}>Here's your financial analysis</Text>
+          <Text style={styles.subtitle}>Track your financial progress</Text>
         </View>
 
         {/* Period Selector */}
@@ -431,110 +525,121 @@ export default function AnalyticsScreen() {
               </View>
             </View>
 
-            {/* Insight Card */}
+            {/* AI Analysis Card */}
+            <View style={styles.aiAnalysisCard}>
+              <View style={styles.aiHeader}>
+                <View style={styles.aiIcon}>
+                  <Ionicons name="analytics" size={24} color={theme.colors.primary} />
+                </View>
+                <Text style={styles.aiTitle}>🤖 AI Financial Analysis</Text>
+              </View>
+              <Text style={styles.aiSubtitle}>
+                Get personalized insights, spending recommendations, and financial advice powered by artificial intelligence.
+              </Text>
+              <TouchableOpacity style={styles.aiButton} onPress={handleAIAnalysis}>
+                <Ionicons name="analytics" size={20} color="white" />
+                <Text style={styles.aiButtonText}>Analyze My Finances</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick Insight with Financial Health Score */}
             <View style={styles.insightCard}>
-              <Text style={styles.insightTitle}>💡 Financial Insight</Text>
+              <Text style={styles.insightTitle}>💡 Financial Health Analysis</Text>
               <Text style={styles.insightText}>
+                <Text style={{ fontWeight: 'bold' }}>Health Score: {healthScore}/100</Text>{'\n\n'}
+                <Text style={{ fontWeight: 'bold' }}>Net Savings Rate: {savingsRate.toFixed(1)}%</Text> (True wealth building){'\n'}
+                <Text style={{ fontWeight: 'bold' }}>Cash Flow Rate: {cashFlowSavingsRate.toFixed(1)}%</Text> (Income vs Expenses){'\n\n'}
                 {savingsRate >= 20 
-                  ? `Great job! You're saving ${savingsRate.toFixed(1)}% of your income. Keep up the excellent financial discipline!`
+                  ? `🎯 Excellent! Your ${savingsRate.toFixed(1)}% net savings rate shows you're building real wealth. Your actual asset growth exceeds the 20% target.`
                   : savingsRate >= 10 
-                  ? `You're saving ${savingsRate.toFixed(1)}% of your income. Consider reducing expenses in ${topCategory?.name || 'top spending categories'} to improve your savings rate.`
-                  : netSavings >= 0 
-                  ? `You're saving ${savingsRate.toFixed(1)}% of your income. Try to aim for at least 10-20% savings rate for better financial health.`
-                  : `You're spending more than you earn. Consider reviewing your expenses, especially in ${topCategory?.name || 'high spending categories'}.`
+                  ? `💪 Good progress! Your ${savingsRate.toFixed(1)}% net savings rate is solid. Push toward 20% for optimal financial security.`
+                  : savingsRate >= 0 
+                  ? `⚠️ Your ${savingsRate.toFixed(1)}% net savings rate needs improvement. Focus on increasing actual wealth accumulation.`
+                  : `🚨 Warning: Negative ${Math.abs(savingsRate).toFixed(1)}% savings rate means your net worth is declining. Immediate action required!`
                 }
               </Text>
             </View>
 
-            {/* 1. Spending by Category */}
-            {categoryData.length > 0 && (
-              <View style={styles.chartContainer}>
-                <View style={styles.chartHeader}>
-                  <View style={styles.chartIcon}>
-                    <Ionicons name="pie-chart" size={20} color={theme.colors.primary} />
+            {/* Financial Analytics Chart - Only show if we have real data */}
+            {(() => {
+              const chartData = getAdvancedChartData();
+              if (chartData.labels.length === 0) {
+                return (
+                  <View style={styles.chartContainer}>
+                    <View style={styles.chartHeader}>
+                      <View style={styles.chartIcon}>
+                        <Ionicons name="analytics" size={20} color={theme.colors.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.chartTitle}>Financial Analytics</Text>
+                      </View>
+                    </View>
+                    <View style={styles.emptyState}>
+                      <Ionicons name="analytics-outline" size={48} color={theme.colors.textSecondary} />
+                      <Text style={styles.emptyText}>
+                        Add more transactions to see your financial trends
+                      </Text>
+                    </View>
                   </View>
-                  <Text style={styles.chartTitle}>Spending by Category</Text>
-                </View>
-                <PieChart
-                  data={getCategoryPieData()}
-                  width={chartWidth - 64}
-                  height={220}
-                  chartConfig={chartConfig}
-                  accessor="amount"
-                  backgroundColor="transparent"
-                  paddingLeft="15"
-                  center={[10, 0]}
-                  absolute
-                />
-              </View>
-            )}
-
-            {/* 2. Income vs Expenses Chart */}
-            <View style={styles.chartContainer}>
-              <View style={styles.chartHeader}>
-                <View style={styles.chartIcon}>
-                  <Ionicons name="bar-chart" size={20} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.chartTitle}>Income vs Expenses Trend</Text>
-              </View>
-              <BarChart
-                data={getIncomeExpenseChartData()}
-                width={chartWidth - 64}
-                height={220}
-                chartConfig={chartConfig}
-                verticalLabelRotation={0}
-                showValuesOnTopOfBars={false}
-                withInnerLines={false}
-                yAxisLabel={CURRENCY_SYMBOL}
-                yAxisSuffix=""
-                style={{ marginLeft: -20 }}
-              />
-            </View>
-
-            {/* 3. Account Balance Distribution */}
-            {accounts.length > 1 && getAccountBalanceData().length > 0 && (
-              <View style={styles.chartContainer}>
-                <View style={styles.chartHeader}>
-                  <View style={styles.chartIcon}>
-                    <Ionicons name="wallet" size={20} color={theme.colors.primary} />
+                );
+              }
+              
+              return (
+                <View style={styles.chartContainer}>
+                  <View style={styles.chartHeader}>
+                    <View style={styles.chartIcon}>
+                      <Ionicons name="analytics" size={20} color={theme.colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.chartTitle}>Financial Analytics</Text>
+                    </View>
                   </View>
-                  <Text style={styles.chartTitle}>Account Balance Distribution</Text>
+                  
+                  <LineChart
+                    data={chartData}
+                    width={chartWidth - 32}
+                    height={280}
+                    chartConfig={chartConfig}
+                    bezier={true}
+                    style={{ 
+                      marginLeft: -16,
+                      borderRadius: 16,
+                      marginVertical: theme.spacing.sm,
+                    }}
+                    fromZero={false}
+                    withDots={true}
+                    withVerticalLabels={true}
+                    withHorizontalLabels={true}
+                    yAxisInterval={1}
+                    transparent={true}
+                  />
+                  
+                  {/* Custom Legend */}
+                  <View style={styles.chartLegend}>
+                    <View style={styles.legendRow}>
+                      <View style={[styles.legendDot, { backgroundColor: '#00D2AA' }]} />
+                      <Text style={styles.legendText}>Savings Rate</Text>
+                    </View>
+                    <View style={styles.legendRow}>
+                      <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
+                      <Text style={styles.legendText}>Net Savings</Text>
+                    </View>
+                    <View style={styles.legendRow}>
+                      <View style={[styles.legendDot, { backgroundColor: '#2196F3' }]} />
+                      <Text style={styles.legendText}>Income Growth</Text>
+                    </View>
+                    <View style={styles.legendRow}>
+                      <View style={[styles.legendDot, { backgroundColor: '#FF9800' }]} />
+                      <Text style={styles.legendText}>Expense Efficiency</Text>
+                    </View>
+                    <View style={styles.legendRow}>
+                      <View style={[styles.legendDot, { backgroundColor: '#F44336' }]} />
+                      <Text style={styles.legendText}>Target (20%)</Text>
+                    </View>
+                  </View>
                 </View>
-                <PieChart
-                  data={getAccountBalanceData()}
-                  width={chartWidth - 64}
-                  height={220}
-                  chartConfig={chartConfig}
-                  accessor="amount"
-                  backgroundColor="transparent"
-                  paddingLeft="15"
-                  center={[10, 0]}
-                  absolute
-                />
-              </View>
-            )}
-
-            {/* 4. Net Savings Trend */}
-            <View style={styles.chartContainer}>
-              <View style={styles.chartHeader}>
-                <View style={styles.chartIcon}>
-                  <Ionicons name="trending-up" size={20} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.chartTitle}>Net Savings Over Time</Text>
-              </View>
-              <LineChart
-                data={getNetSavingsChartData()}
-                width={chartWidth - 64}
-                height={220}
-                chartConfig={chartConfig}
-                bezier
-                withInnerLines={false}
-                withOuterLines={false}
-                withVerticalLines={false}
-                withHorizontalLines={true}
-                style={{ marginLeft: -20 }}
-              />
-            </View>
+              );
+            })()}
           </>
         ) : (
           <View style={styles.emptyState}>

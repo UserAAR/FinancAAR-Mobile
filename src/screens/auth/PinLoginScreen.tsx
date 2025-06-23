@@ -14,21 +14,17 @@ import { useAlert } from '../../hooks/useNotification';
 
 export default function PinLoginScreen() {
   const { theme } = useTheme();
-  const { authenticateWithPin, authenticateWithBiometric, authState, biometricState } = useAuth();
+  const { authenticateWithPin, authenticateWithBiometric, authState, biometricState, userPreferences } = useAuth();
   const alert = useAlert();
   const [pin, setPin] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [showPinKeypad, setShowPinKeypad] = useState(false);
+  const [biometricTriggered, setBiometricTriggered] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
-  useEffect(() => {
-    // Auto-trigger biometric authentication if enabled with a small delay
-    if (authState.biometricEnabled && biometricState.canUseBiometric) {
-      setTimeout(() => {
-        handleBiometricAuth();
-      }, 500);
-    }
-  }, []);
+  // No auto-start useEffect - user chooses manually
 
   const handlePinSubmit = async () => {
     if (pin.length < 4) {
@@ -64,12 +60,24 @@ export default function PinLoginScreen() {
   const handleBiometricAuth = async () => {
     try {
       const result = await authenticateWithBiometric();
-      if (!result.success && result.error) {
-        console.log('Biometric auth failed:', result.error);
+      if (!result.success) {
+        setIsScanning(false);
       }
     } catch (error) {
-      console.log('Biometric auth error:', error);
+      setIsScanning(false);
     }
+  };
+
+  const handleUsePinInstead = () => {
+    setIsScanning(false);
+    setShowPinKeypad(true);
+  };
+
+  const handleUseBiometricInstead = () => {
+    setShowPinKeypad(false);
+    setIsScanning(true);
+    setBiometricTriggered(true);
+    handleBiometricAuth();
   };
 
   const styles = StyleSheet.create({
@@ -84,14 +92,23 @@ export default function PinLoginScreen() {
       paddingHorizontal: theme.spacing.xl,
       paddingTop: theme.spacing.xl,
     },
-
+    topSectionCompact: {
+      flex: 0.6,
+      paddingTop: theme.spacing.xl + 20,
+    },
     welcomeSection: {
       alignItems: 'center',
       marginBottom: theme.spacing.xxl,
     },
+    welcomeSectionCompact: {
+      marginBottom: theme.spacing.lg,
+    },
     greetingContainer: {
       alignItems: 'center',
       marginBottom: theme.spacing.lg,
+    },
+    greetingContainerCompact: {
+      marginBottom: theme.spacing.md,
     },
     welcomeText: {
       fontSize: 30,
@@ -101,12 +118,19 @@ export default function PinLoginScreen() {
       marginBottom: theme.spacing.sm,
       letterSpacing: 0.6,
     },
+    welcomeTextCompact: {
+      fontSize: 26,
+      marginBottom: theme.spacing.xs,
+    },
     userName: {
       fontSize: 34,
       fontWeight: '600',
       color: theme.colors.primary,
       textAlign: 'center',
       letterSpacing: 0.4,
+    },
+    userNameCompact: {
+      fontSize: 30,
     },
     subtitle: {
       fontSize: 16,
@@ -119,6 +143,10 @@ export default function PinLoginScreen() {
     bottomSection: {
       paddingHorizontal: theme.spacing.xl,
       paddingBottom: theme.spacing.xl * 2,
+    },
+    bottomSectionExpanded: {
+      flex: 1,
+      justifyContent: 'center',
     },
     pinSection: {
       marginBottom: theme.spacing.xl,
@@ -192,10 +220,17 @@ export default function PinLoginScreen() {
       borderColor: theme.colors.primary + '30',
       marginBottom: theme.spacing.md,
     },
+    biometricButtonScanning: {
+      backgroundColor: theme.colors.success + '15',
+      borderColor: theme.colors.success + '30',
+    },
     biometricText: {
       color: theme.colors.primary,
       fontSize: 16,
       fontWeight: '500',
+    },
+    biometricTextScanning: {
+      color: theme.colors.success,
     },
     divider: {
       flexDirection: 'row',
@@ -220,90 +255,217 @@ export default function PinLoginScreen() {
       marginTop: theme.spacing.md,
       fontWeight: '500',
     },
+    biometricMainContainer: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xl,
+    },
+    biometricTitle: {
+      color: theme.colors.primary,
+      fontSize: 22,
+      fontWeight: '600',
+      textAlign: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    biometricSubtitle: {
+      color: theme.colors.textSecondary,
+      fontSize: 16,
+      fontWeight: '400',
+      textAlign: 'center',
+      marginBottom: theme.spacing.xl,
+      paddingHorizontal: theme.spacing.lg,
+    },
+    biometricMainButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.colors.primary + '15',
+      borderWidth: 2,
+      borderColor: theme.colors.primary + '30',
+      marginBottom: theme.spacing.xl,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    pinAlternativeButton: {
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+      borderRadius: theme.borderRadius.xl,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.xl,
+      alignItems: 'center',
+    },
+    pinAlternativeText: {
+      color: theme.colors.primary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    pinOnlyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: theme.spacing.lg,
+    },
+    pinOnlyContainerCentered: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    titleCentered: {
+      fontSize: 20,
+      fontWeight: '600',
+      marginBottom: theme.spacing.xl,
+    },
+    pinOnlySubtitle: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      letterSpacing: 0.2,
+      opacity: 0.9,
+    },
   });
 
   return (
     <View style={styles.container}>
       {/* Top Section - Beautiful Welcome */}
-      <View style={styles.topSection}>
-        <View style={styles.welcomeSection}>
-          <View style={styles.greetingContainer}>
-            <Text style={styles.welcomeText}>Welcome back,</Text>
+      <View style={[
+        styles.topSection,
+        !isScanning && styles.topSectionCompact
+      ]}>
+        <View style={[
+          styles.welcomeSection,
+          !isScanning && styles.welcomeSectionCompact
+        ]}>
+          <View style={[
+            styles.greetingContainer,
+            !isScanning && styles.greetingContainerCompact
+          ]}>
+            <Text style={[
+              styles.welcomeText,
+              !isScanning && styles.welcomeTextCompact
+            ]}>
+              Welcome back,
+            </Text>
             {authState.userName ? (
-              <Text style={styles.userName}>{authState.userName}!</Text>
+              <Text style={[
+                styles.userName,
+                !isScanning && styles.userNameCompact
+              ]}>
+                {authState.userName}!
+              </Text>
             ) : (
-              <Text style={styles.userName}>Friend!</Text>
+              <Text style={[
+                styles.userName,
+                !isScanning && styles.userNameCompact
+              ]}>
+                Friend!
+              </Text>
             )}
           </View>
-
+          
+          {/* Add subtitle for PIN-only mode */}
+          {!isScanning && (
+            <Text style={styles.pinOnlySubtitle}>
+              Ready to manage your finances?
+            </Text>
+          )}
         </View>
       </View>
 
       {/* Bottom Section - Authentication */}
-      <View style={styles.bottomSection}>
+      <View style={[
+        styles.bottomSection,
+        styles.bottomSectionExpanded
+      ]}>
+        {/* Always show combined PIN + Fingerprint interface */}
+        
+        {/* PIN Section */}
         <View style={styles.pinSection}>
-          <Text style={styles.title}>Enter your PIN to continue</Text>
+          <Text style={styles.title}>
+            Choose your authentication method
+          </Text>
           
-          <View style={[
-            styles.pinInputContainer,
-            (isFocused || pin.length > 0) && styles.pinInputFocused
-          ]}>
-            <TextInput
-              style={styles.pinInput}
-              placeholder={'•'.repeat(authState.pinLength)}
-              placeholderTextColor={theme.colors.textSecondary + '60'}
-              value={pin}
-              onChangeText={setPin}
-              keyboardType="numeric"
-              secureTextEntry
-              maxLength={authState.pinLength}
-              onSubmitEditing={handlePinSubmit}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              autoFocus={!(authState.biometricEnabled && biometricState.canUseBiometric)}
-            />
-          </View>
+          {/* PIN Input - Show only when user chooses PIN */}
+          {showPinKeypad && (
+            <>
+              <View style={[
+                styles.pinInputContainer,
+                (isFocused || pin.length > 0) && styles.pinInputFocused
+              ]}>
+                <TextInput
+                  style={styles.pinInput}
+                  placeholder={'•'.repeat(authState.pinLength)}
+                  placeholderTextColor={theme.colors.textSecondary + '60'}
+                  value={pin}
+                  onChangeText={setPin}
+                  keyboardType="numeric"
+                  secureTextEntry
+                  maxLength={authState.pinLength}
+                  onSubmitEditing={handlePinSubmit}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  autoFocus={true}
+                />
+              </View>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.button,
+                  (isLoading || pin.length < authState.pinLength) && styles.buttonDisabled
+                ]} 
+                onPress={handlePinSubmit}
+                disabled={isLoading || pin.length < authState.pinLength}
+              >
+                <Text style={styles.buttonText}>
+                  {isLoading ? 'Authenticating...' : 'Continue'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
           
-          <TouchableOpacity 
-            style={[
-              styles.button,
-              (isLoading || pin.length < authState.pinLength) && styles.buttonDisabled
-            ]} 
-            onPress={handlePinSubmit}
-            disabled={isLoading || pin.length < authState.pinLength}
-          >
-            <Text style={styles.buttonText}>
-              {isLoading ? 'Authenticating...' : 'Continue'}
-            </Text>
-          </TouchableOpacity>
+          {/* PIN Button - Show when PIN keypad is hidden */}
+          {!showPinKeypad && (
+            <TouchableOpacity 
+              style={styles.button}
+              onPress={handleUsePinInstead}
+            >
+              <Text style={styles.buttonText}>Use PIN</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Biometric Authentication */}
-        {authState.biometricEnabled && biometricState.canUseBiometric && (
-          <>
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-            
-            <View style={styles.biometricContainer}>
-              <TouchableOpacity 
-                style={styles.biometricButton} 
-                onPress={handleBiometricAuth}
-              >
-                <Ionicons 
-                  name="finger-print" 
-                  size={24} 
-                  color={theme.colors.primary} 
-                />
-              </TouchableOpacity>
-              <Text style={styles.biometricText}>
-                Use {biometricState.getBiometricName()}
-              </Text>
-            </View>
-          </>
-        )}
+        {/* Divider */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
+        
+        {/* Biometric Section */}
+        <View style={styles.biometricContainer}>
+          <TouchableOpacity 
+            style={[
+              styles.biometricButton,
+              isScanning && styles.biometricButtonScanning
+            ]} 
+            onPress={handleUseBiometricInstead}
+          >
+            <Ionicons 
+              name="finger-print" 
+              size={32} 
+              color={isScanning ? theme.colors.success : theme.colors.primary} 
+            />
+          </TouchableOpacity>
+          <Text style={[
+            styles.biometricText,
+            isScanning && styles.biometricTextScanning
+          ]}>
+            {isScanning ? `Scanning ${biometricState.getBiometricName()}...` : `Use ${biometricState.getBiometricName()}`}
+          </Text>
+        </View>
 
         {attempts > 0 && (
           <Text style={styles.attemptsText}>

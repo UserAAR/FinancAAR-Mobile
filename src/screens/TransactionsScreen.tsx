@@ -86,7 +86,7 @@ export default function TransactionsScreen() {
       
       setTransactions(transactionData);
     } catch (error) {
-      console.error('Error loading transactions:', error);
+      // Error handled silently for production
     } finally {
       setIsLoading(false);
     }
@@ -116,6 +116,10 @@ export default function TransactionsScreen() {
         return 'swap-horizontal';
       case 'debt_payment':
         return 'card';
+      case 'borrowed':
+        return 'person-add';
+      case 'lent':
+        return 'person-remove';
       default:
         return 'cash';
     }
@@ -131,6 +135,10 @@ export default function TransactionsScreen() {
         return theme.colors.primary;
       case 'debt_payment':
         return theme.colors.warning;
+      case 'borrowed':
+        return '#9C27B0'; // Purple for borrowed money
+      case 'lent':
+        return '#FF6F00'; // Orange for lent money
       default:
         return theme.colors.text;
     }
@@ -182,9 +190,13 @@ export default function TransactionsScreen() {
           styles.amountText,
           { color: getTransactionColor(item.type) }
         ]}>
-          {item.type === 'income' ? '+' : item.type === 'transfer' ? '→' : '-'}{formatCurrency(item.amount)}
+          {item.type === 'income' || item.type === 'borrowed' ? '+' : 
+           item.type === 'transfer' ? '→' : '-'}{formatCurrency(item.amount)}
         </Text>
-        <Text style={styles.transactionType}>{item.type}</Text>
+        <Text style={styles.transactionType}>
+          {item.type === 'borrowed' ? 'borrowed' : 
+           item.type === 'lent' ? 'lent' : item.type}
+        </Text>
       </View>
     </View>
   );
@@ -364,8 +376,8 @@ export default function TransactionsScreen() {
   });
 
   const totalAmount = transactions.reduce((sum, transaction) => {
-    if (transaction.type === 'income') return sum + transaction.amount;
-    if (transaction.type === 'expense') return sum - transaction.amount;
+    if (transaction.type === 'income' || transaction.type === 'borrowed') return sum + transaction.amount;
+    if (transaction.type === 'expense' || transaction.type === 'lent') return sum - transaction.amount;
     return sum;
   }, 0);
 

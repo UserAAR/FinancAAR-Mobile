@@ -31,22 +31,15 @@ export default function QuickStats({ refreshTrigger }: QuickStatsProps) {
     try {
       setIsLoading(true);
       
-      // Get total balance from all accounts
+      // Get total balance from all accounts (accurate current net worth)
       const balanceData = database.getTotalBalance();
       setTotalBalance(balanceData.total);
       
-      // Get current month data
-      const monthlyData = database.getMonthlyData(1);
-      if (monthlyData.length > 0) {
-        const currentMonth = monthlyData[0];
-        setMonthlyIncome(currentMonth.income);
-        setMonthlyExpense(currentMonth.expense);
-      } else {
-        setMonthlyIncome(0);
-        setMonthlyExpense(0);
-      }
+      // Get current month data using direct calculation
+      const currentMonthData = database.getCurrentMonthData();
+      setMonthlyIncome(currentMonthData.income);
+      setMonthlyExpense(currentMonthData.expense);
     } catch (error) {
-      console.error('Error loading stats:', error);
       // Set default values on error
       setTotalBalance(0);
       setMonthlyIncome(0);

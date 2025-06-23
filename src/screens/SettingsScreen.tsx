@@ -18,6 +18,7 @@ import { useAlert, useToast, useNotification } from '../hooks/useNotification';
 import { database } from '../utils/database';
 import { Account, CardAccount } from '../types';
 import AppLogo from '../components/AppLogo';
+import { useAIApiKey } from '../hooks/useSecureStorage';
 import * as Crypto from 'expo-crypto';
 
 type SettingItem = {
@@ -31,6 +32,13 @@ type SettingItem = {
   onToggle?: (value: boolean) => void;
   destructive?: boolean;
   requiresSecurity?: boolean;
+};
+
+type AIProvider = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
 };
 
 export default function SettingsScreen() {
@@ -63,6 +71,23 @@ export default function SettingsScreen() {
   const [newAccountEmoji, setNewAccountEmoji] = useState('');
   const [targetPinLength, setTargetPinLength] = useState<4 | 6>(4);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showDeveloperModal, setShowDeveloperModal] = useState(false);
+  const [newAPIKey, setNewAPIKey] = useState('');
+  const [selectedAIProvider, setSelectedAIProvider] = useState<AIProvider | null>(null);
+  const [aiKeyState, setAIKeyState] = useAIApiKey();
+  const currentAIKey = aiKeyState[1];
+  const setCurrentAIKey = (value: string | null) => setAIKeyState(value);
+
+  const aiProviders: AIProvider[] = [
+    { id: 'gemini', name: 'Google Gemini', description: 'Google\'s latest AI model', icon: 'diamond' },
+    { id: 'chatgpt', name: 'ChatGPT', description: 'OpenAI\'s conversational AI', icon: 'chatbubbles' },
+    { id: 'claude', name: 'Anthropic Claude', description: 'Anthropic\'s AI assistant', icon: 'library' },
+    { id: 'grok', name: 'Grok (X AI)', description: 'X\'s AI with real-time data', icon: 'flash' },
+    { id: 'deepseek', name: 'DeepSeek', description: 'Advanced reasoning AI model', icon: 'telescope' },
+    { id: 'mistral', name: 'Mistral AI', description: 'European AI excellence', icon: 'rocket' },
+    { id: 'llama', name: 'Meta Llama', description: 'Meta\'s open-source AI', icon: 'layers' },
+    { id: 'cohere', name: 'Cohere', description: 'Enterprise AI platform', icon: 'business' },
+  ];
 
   const cardColors = [
     '#00D2AA', '#4CAF50', '#2196F3', '#FF9800', '#E91E63', 
@@ -277,14 +302,24 @@ export default function SettingsScreen() {
 
   const handleBiometricToggle = async (enabled: boolean) => {
     try {
-      if (enabled) {
-        await biometric.enable();
-      } else {
-        await biometric.disable();
+      if (enabled && !biometric.canUseBiometric) {
+        alert.error('Biometric Not Available', 'Biometric authentication is not available on this device');
+        return;
       }
+      
+      if (enabled) {
+        // Test biometric authentication before enabling
+        const result = await biometric.authenticate();
+        if (!result.success) {
+          alert.error('Biometric Authentication Failed', 'Please set up biometric authentication in your device settings first');
+          return;
+        }
+      }
+      
       await updateUserPreferences({ biometricEnabled: enabled });
       toast.success('Biometric Settings Updated', `Biometric login ${enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
+      console.error('Biometric toggle error:', error);
       alert.error('Error', 'Failed to update biometric settings');
     }
   };
@@ -408,6 +443,47 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleSaveAPIKey = async () => {
+    if (!selectedAIProvider) {
+      alert.error('AI Provider Required', 'Please select an AI provider first');
+      return;
+    }
+
+    if (!newAPIKey.trim()) {
+      alert.error('Invalid Key', 'Please enter a valid API key');
+      return;
+    }
+
+    try {
+      setCurrentAIKey(newAPIKey.trim());
+      setShowDeveloperModal(false);
+      setNewAPIKey('');
+      setSelectedAIProvider(null);
+      toast.success('API Key Saved!', `Your ${selectedAIProvider.name} API key has been securely stored`);
+    } catch (error) {
+      alert.error('Error', 'Failed to save API key');
+    }
+  };
+
+  const handleDeleteAPIKey = () => {
+    alert.confirm(
+      'Delete API Key',
+      'This will remove your stored API key. You won\'t be able to use AI features until you add a new key.',
+      () => {
+        setCurrentAIKey(null);
+        setSelectedAIProvider(null);
+        toast.success('API Key Deleted!', 'API key has been removed');
+      }
+    );
+  };
+
+  const handleDeveloperSettings = () => {
+    requireSecurity(() => {
+      setNewAPIKey(currentAIKey || '');
+      setShowDeveloperModal(true);
+    });
+  };
+
   const settingSections = [
     {
       title: 'Account',
@@ -516,11 +592,27 @@ export default function SettingsScreen() {
         {
           id: 'biometric',
           title: 'Biometric Login',
-          subtitle: 'Use fingerprint or face unlock',
+          subtitle: biometric.canUseBiometric 
+            ? 'Use fingerprint or face unlock' 
+            : 'Biometric authentication not available',
           icon: 'finger-print',
           type: 'switch' as const,
-          value: authState.biometricEnabled && biometric.canUseBiometric,
-          onToggle: handleBiometricToggle,
+          value: userPreferences.biometricEnabled,
+          onToggle: biometric.canUseBiometric ? handleBiometricToggle : undefined,
+        },
+      ],
+    },
+    {
+      title: 'Developer Settings',
+      items: [
+        {
+          id: 'api-configuration',
+          title: 'API Configuration',
+          subtitle: currentAIKey ? '✓ Custom API configured' : 'Using default AI service',
+          icon: 'code-slash',
+          type: 'navigation' as const,
+          onPress: handleDeveloperSettings,
+          requiresSecurity: true,
         },
       ],
     },
@@ -989,6 +1081,97 @@ export default function SettingsScreen() {
       color: theme.colors.textSecondary,
       textAlign: 'center',
     },
+    // AI API Key Modal Styles
+    apiKeyHelp: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginTop: theme.spacing.md,
+      lineHeight: 20,
+    },
+    destructiveButton: {
+      backgroundColor: theme.colors.error,
+    },
+    destructiveButtonText: {
+      color: 'white',
+    },
+    // Developer Settings Styles
+    developerInfo: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+      alignItems: 'center',
+    },
+    defaultServiceText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+      textAlign: 'center',
+      marginTop: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    customAPIText: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    aiProviderScroll: {
+      marginTop: theme.spacing.sm,
+    },
+    aiProviderCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.md,
+      marginHorizontal: theme.spacing.xs,
+      alignItems: 'center',
+      minWidth: 80,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+    },
+    selectedAIProvider: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.primary + '10',
+    },
+    aiProviderName: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: theme.colors.text,
+      marginTop: theme.spacing.xs,
+      textAlign: 'center',
+    },
+    selectedAIProviderText: {
+      color: theme.colors.primary,
+      fontWeight: '600',
+    },
+    // Developer Modal Button Styles
+    developerModalButtons: {
+      gap: theme.spacing.md,
+      marginTop: theme.spacing.lg,
+    },
+    fullWidthButton: {
+      width: '100%',
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+    },
+    halfWidthButton: {
+      flex: 1,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      marginHorizontal: theme.spacing.xs,
+    },
+    actionButtonsRow: {
+      flexDirection: 'row',
+      width: '100%',
+      gap: theme.spacing.sm,
+    },
   });
 
   return (
@@ -1008,7 +1191,7 @@ export default function SettingsScreen() {
         <View style={styles.appInfo}>
           <View style={styles.logoContainer}>
             <AppLogo size="large" variant="text-only" showVersion={false} />
-            <Text style={styles.appVersion}>Version 1.0.0</Text>
+            <Text style={styles.appVersion}>Version 2.1.0</Text>
           </View>
         </View>
       </ScrollView>
@@ -1499,6 +1682,140 @@ export default function SettingsScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Developer Settings Modal */}
+      <Modal
+        visible={showDeveloperModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeveloperModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <ScrollView 
+            style={styles.modalContainer} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: theme.spacing.lg }}
+          >
+            <Text style={styles.modalTitle}>API Configuration</Text>
+            
+            <View style={styles.developerInfo}>
+              <View style={[styles.iconContainer, { alignSelf: 'center', backgroundColor: theme.colors.primary + '20' }]}>
+                <Ionicons name="information-circle" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.defaultServiceText}>
+                By default, we use our own AI analysis service for optimal performance and privacy.
+              </Text>
+              <Text style={styles.customAPIText}>
+                If you prefer to use your own API, configure it below. Your API key is stored securely on your device and never shared.
+              </Text>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>AI Provider</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.aiProviderScroll}
+                contentContainerStyle={{ paddingHorizontal: theme.spacing.sm }}
+              >
+                {aiProviders.map((provider) => (
+                  <TouchableOpacity
+                    key={provider.id}
+                    style={[
+                      styles.aiProviderCard,
+                      selectedAIProvider?.id === provider.id && styles.selectedAIProvider
+                    ]}
+                    onPress={() => setSelectedAIProvider(provider)}
+                  >
+                    <Ionicons 
+                      name={provider.icon as any} 
+                      size={24} 
+                      color={selectedAIProvider?.id === provider.id ? theme.colors.primary : theme.colors.textSecondary} 
+                    />
+                    <Text style={[
+                      styles.aiProviderName,
+                      selectedAIProvider?.id === provider.id && styles.selectedAIProviderText
+                    ]}>
+                      {provider.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>API Key</Text>
+              <TextInput
+                style={styles.input}
+                value={newAPIKey}
+                onChangeText={setNewAPIKey}
+                placeholder="Enter your API key"
+                placeholderTextColor={theme.colors.textSecondary}
+                secureTextEntry={true}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <Text style={styles.apiKeyHelp}>
+              Enter your API key to use AI analysis with your own provider. We encrypt and store your key securely on your device only.
+            </Text>
+
+            <View style={styles.developerModalButtons}>
+              <TouchableOpacity
+                style={[styles.fullWidthButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowDeveloperModal(false);
+                  setNewAPIKey('');
+                  setSelectedAIProvider(null);
+                }}
+              >
+                <Text style={[styles.modalButtonText, styles.cancelButtonText]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              
+              <View style={styles.actionButtonsRow}>
+                {currentAIKey && (
+                  <TouchableOpacity
+                    style={[styles.halfWidthButton, styles.destructiveButton]}
+                    onPress={handleDeleteAPIKey}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="white" />
+                    <Text style={[styles.modalButtonText, styles.destructiveButtonText, { marginLeft: 6 }]}>
+                      Delete
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity
+                  style={[
+                    currentAIKey ? styles.halfWidthButton : styles.fullWidthButton, 
+                    styles.confirmButton,
+                    (!selectedAIProvider || !newAPIKey.trim()) && styles.disabledButton
+                  ]}
+                  onPress={handleSaveAPIKey}
+                  disabled={!selectedAIProvider || !newAPIKey.trim()}
+                >
+                  <Ionicons 
+                    name="save-outline" 
+                    size={16} 
+                    color={(!selectedAIProvider || !newAPIKey.trim()) ? theme.colors.textSecondary : "white"} 
+                  />
+                  <Text style={[
+                    styles.modalButtonText, 
+                    styles.confirmButtonText, 
+                    { marginLeft: 6 },
+                    (!selectedAIProvider || !newAPIKey.trim()) && styles.disabledButtonText
+                  ]}>
+                    Save Config
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
         </View>
       </Modal>
 

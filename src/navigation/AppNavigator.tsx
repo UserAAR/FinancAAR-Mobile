@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -8,19 +9,59 @@ import HomeScreen from '../screens/HomeScreen';
 import AddTransactionScreen from '../screens/AddTransactionScreen';
 import TransactionsScreen from '../screens/TransactionsScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
+import AIAnalysisScreen from '../screens/AIAnalysisScreen';
 import DebtsScreen from '../screens/DebtsScreen';
+import DebtDetailScreen from '../screens/DebtDetailScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 export type TabParamList = {
   Home: undefined;
   AddTransaction: undefined;
   Transactions: undefined;
-  Analytics: undefined;
-  Debts: undefined;
+  AnalyticsStack: undefined;
+  DebtsStack: undefined;
   Settings: undefined;
 };
 
+export type AnalyticsStackParamList = {
+  Analytics: undefined;
+  AIAnalysis: undefined;
+};
+
+export type DebtsStackParamList = {
+  Debts: undefined;
+  DebtDetail: { debtId: string };
+};
+
 const Tab = createBottomTabNavigator<TabParamList>();
+const AnalyticsStack = createStackNavigator<AnalyticsStackParamList>();
+const DebtsStack = createStackNavigator<DebtsStackParamList>();
+
+function AnalyticsStackNavigator() {
+  return (
+    <AnalyticsStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <AnalyticsStack.Screen name="Analytics" component={AnalyticsScreen} />
+      <AnalyticsStack.Screen name="AIAnalysis" component={AIAnalysisScreen} />
+    </AnalyticsStack.Navigator>
+  );
+}
+
+function DebtsStackNavigator() {
+  return (
+    <DebtsStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <DebtsStack.Screen name="Debts" component={DebtsScreen} />
+      <DebtsStack.Screen name="DebtDetail" component={DebtDetailScreen} />
+    </DebtsStack.Navigator>
+  );
+}
 
 function AppNavigator() {
   const { theme } = useTheme();
@@ -37,9 +78,9 @@ function AppNavigator() {
             iconName = focused ? 'add-circle' : 'add-circle-outline';
           } else if (route.name === 'Transactions') {
             iconName = focused ? 'receipt' : 'receipt-outline';
-          } else if (route.name === 'Analytics') {
+          } else if (route.name === 'AnalyticsStack') {
             iconName = focused ? 'bar-chart' : 'bar-chart-outline';
-          } else if (route.name === 'Debts') {
+          } else if (route.name === 'DebtsStack') {
             iconName = focused ? 'people' : 'people-outline';
           } else if (route.name === 'Settings') {
             iconName = focused ? 'settings' : 'settings-outline';
@@ -96,16 +137,18 @@ function AppNavigator() {
         }}
       />
       <Tab.Screen
-        name="Analytics"
-        component={AnalyticsScreen}
+        name="AnalyticsStack"
+        component={AnalyticsStackNavigator}
         options={{
+          tabBarLabel: 'Analytics',
           headerShown: false,
         }}
       />
       <Tab.Screen
-        name="Debts"
-        component={DebtsScreen}
+        name="DebtsStack"
+        component={DebtsStackNavigator}
         options={{
+          tabBarLabel: 'Debts',
           headerShown: false,
         }}
       />

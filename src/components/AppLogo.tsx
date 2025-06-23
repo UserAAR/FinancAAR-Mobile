@@ -117,7 +117,7 @@ export default function AppLogo({
           <Text style={styles.textLogo}>FinancAAR</Text>
         </View>
         {showVersion && (
-          <Text style={styles.versionText}>v1.0.0</Text>
+          <Text style={styles.versionText}>v2.1.0</Text>
         )}
       </View>
     );
@@ -135,7 +135,7 @@ export default function AppLogo({
         <Text style={styles.appName}>FinancAAR</Text>
         <Text style={styles.appTagline}>Personal Finance</Text>
         {showVersion && (
-          <Text style={styles.versionText}>v1.0.0</Text>
+          <Text style={styles.versionText}>v2.1.0</Text>
         )}
       </View>
     </View>

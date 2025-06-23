@@ -76,7 +76,7 @@ const defaultUserPreferences: UserPreferences = {
 
 const defaultAppSettings: AppSettings = {
   lastSyncDate: new Date().toISOString(),
-  appVersion: '1.0.0',
+  appVersion: '2.1.0',
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -132,7 +132,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }));
 
     } catch (error) {
-      console.error('Error initializing auth:', error);
+      // Error handled silently for production
     } finally {
       setIsLoading(false);
     }
@@ -178,7 +178,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }));
       
     } catch (error) {
-      console.error('Error setting up PIN:', error);
+      // Error handled silently for production
       throw error;
     }
   };
@@ -211,7 +211,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       return isValid;
     } catch (error) {
-      console.error('Error authenticating with PIN:', error);
+      // Error handled silently for production
       return false;
     }
   };
@@ -243,7 +243,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       return true;
     } catch (error) {
-      console.error('Error changing PIN:', error);
+      // Error handled silently for production
       return false;
     }
   };
@@ -287,7 +287,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }));
       }
     } catch (error) {
-      console.error('Error updating user preferences:', error);
+      // Error handled silently for production
       throw error;
     }
   };
@@ -323,7 +323,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUserPreferences(defaultUserPreferences);
       setAppSettings(defaultAppSettings);
     } catch (error) {
-      console.error('Error resetting app:', error);
+      // Error handled silently for production
       throw error;
     }
   };

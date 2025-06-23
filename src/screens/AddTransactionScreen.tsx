@@ -50,7 +50,7 @@ export default function AddTransactionScreen() {
 
     // Load categories based on selected type
     if (selectedType !== 'transfer') {
-      const categoryData = database.getCategories(selectedType === 'debt_payment' ? 'expense' : selectedType);
+      const categoryData = database.getCategories(selectedType === 'income' ? 'income' : 'expense');
       setCategories(categoryData);
       
       // Reset category selection when type changes
@@ -65,7 +65,6 @@ export default function AddTransactionScreen() {
       loadData();
       toast.success('Refreshed!', 'Account and category data updated');
     } catch (error) {
-      console.error('Error refreshing data:', error);
       alert.error('Refresh Error', 'Failed to refresh data');
     } finally {
       setRefreshing(false);
@@ -86,7 +85,6 @@ export default function AddTransactionScreen() {
         accountId: selectedAccount!.id,
         toAccountId: selectedType === 'transfer' ? toAccount?.id : undefined,
         date: new Date(),
-        status: 'success' as const,
       };
 
       await database.createTransaction(transactionData);
@@ -103,8 +101,45 @@ export default function AddTransactionScreen() {
         }
       }, 1500);
     } catch (error) {
-      console.error('Error adding transaction:', error);
-      alert.error('Error', 'Failed to add transaction. Please try again.');
+      // Parse error message and show user-friendly alerts
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage.includes('INSUFFICIENT_FUNDS')) {
+        // Extract the specific amount info from error message
+        const balanceMatch = errorMessage.match(/has ₼([\d.]+)/);
+        const amountMatch = errorMessage.match(/trying to [\w\s]+ ₼([\d.]+)/);
+        const accountMatch = errorMessage.match(/Account "([^"]+)"/);
+        
+        const currentBalance = balanceMatch ? balanceMatch[1] : 'unknown';
+        const attemptedAmount = amountMatch ? amountMatch[1] : amount;
+        const accountName = accountMatch ? accountMatch[1] : selectedAccount?.name || 'selected account';
+        
+        alert.error(
+          'Insufficient Funds', 
+          `${accountName} has only ₼${currentBalance} but you're trying to spend ₼${attemptedAmount}.\n\nPlease select a different account or reduce the amount.`
+        );
+      } else if (errorMessage.includes('ACCOUNT_NOT_FOUND')) {
+        alert.error('Account Error', 'The selected account no longer exists. Please refresh and select a different account.');
+      } else if (errorMessage.includes('DESTINATION_ACCOUNT_NOT_FOUND')) {
+        alert.error('Transfer Error', 'The destination account no longer exists. Please refresh and select a different account.');
+      } else if (errorMessage.includes('INVALID_TRANSFER')) {
+        if (errorMessage.includes('same account')) {
+          alert.error('Transfer Error', 'You cannot transfer money to the same account. Please select a different destination account.');
+        } else {
+          alert.error('Transfer Error', 'Please select a valid destination account for the transfer.');
+        }
+      } else if (errorMessage.includes('INVALID_AMOUNT')) {
+        alert.error('Invalid Amount', 'Please enter a valid amount greater than 0.');
+      } else if (errorMessage.includes('INVALID_TITLE')) {
+        alert.error('Missing Title', 'Please enter a title for your transaction.');
+      } else if (errorMessage.includes('INVALID_CATEGORY')) {
+        alert.error('Missing Category', 'Please select a category for your transaction.');
+      } else if (errorMessage.includes('DATABASE_ERROR')) {
+        alert.error('Database Error', 'Failed to save transaction. Please try again.');
+      } else {
+        // Fallback for unknown errors
+        alert.error('Transaction Failed', 'An unexpected error occurred. Please check your information and try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -173,8 +208,6 @@ export default function AddTransactionScreen() {
         return theme.colors.error;
       case 'transfer':
         return theme.colors.primary;
-      case 'debt_payment':
-        return theme.colors.warning;
       default:
         return theme.colors.text;
     }
@@ -188,8 +221,6 @@ export default function AddTransactionScreen() {
         return 'arrow-up';
       case 'transfer':
         return 'swap-horizontal';
-      case 'debt_payment':
-        return 'card';
       default:
         return 'cash';
     }
@@ -228,19 +259,20 @@ export default function AddTransactionScreen() {
     },
     typeButton: {
       flex: 1,
-      paddingVertical: theme.spacing.sm,
-      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.sm,
       borderRadius: theme.borderRadius.sm,
       alignItems: 'center',
       flexDirection: 'row',
       justifyContent: 'center',
+      marginHorizontal: 2,
     },
     activeTypeButton: {
       backgroundColor: theme.colors.primary,
     },
     typeButtonText: {
-      fontSize: 14,
-      fontWeight: '500',
+      fontSize: 15,
+      fontWeight: '600',
       color: theme.colors.textSecondary,
       marginLeft: theme.spacing.xs,
     },
@@ -306,6 +338,7 @@ export default function AddTransactionScreen() {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: theme.spacing.sm,
+      justifyContent: 'center',
     },
     categoryItem: {
       backgroundColor: theme.colors.surface,
@@ -356,7 +389,6 @@ export default function AddTransactionScreen() {
     { type: 'expense', label: 'Expense' },
     { type: 'income', label: 'Income' },
     { type: 'transfer', label: 'Transfer' },
-    { type: 'debt_payment', label: 'Debt Pay' },
   ];
 
   return (
@@ -397,7 +429,7 @@ export default function AddTransactionScreen() {
             >
               <Ionicons
                 name={getTypeIcon(type.type)}
-                size={16}
+                size={18}
                 color={selectedType === type.type ? 'white' : theme.colors.textSecondary}
               />
               <Text style={[

@@ -57,21 +57,15 @@ export default function HomeScreen() {
       const balanceData = database.getTotalBalance();
       setTotalBalance(balanceData.total);
       
-      // Get monthly data for current month
-      const monthlyData = database.getMonthlyData(1);
-      if (monthlyData.length > 0) {
-        const currentMonth = monthlyData[0];
-        setMonthlyIncome(currentMonth.income);
-        setMonthlyExpense(currentMonth.expense);
-      } else {
-        setMonthlyIncome(0);
-        setMonthlyExpense(0);
-      }
+      // Get current month data using direct calculation
+      const currentMonthData = database.getCurrentMonthData();
+      setMonthlyIncome(currentMonthData.income);
+      setMonthlyExpense(currentMonthData.expense);
       
       // Trigger QuickStats refresh
       setRefreshTrigger(prev => prev + 1);
     } catch (error) {
-      console.error('Error loading data:', error);
+      // Error handled silently for production
     } finally {
       setIsLoading(false);
     }
@@ -337,7 +331,7 @@ export default function HomeScreen() {
                 <AccountCard 
                   account={account}
                   onPress={() => {
-                    console.log('Navigate to account:', account.id);
+                    // TODO: Navigate to account detail screen
                   }}
                 />
               </View>

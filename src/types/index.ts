@@ -29,7 +29,7 @@ export interface CardAccount {
 export type Account = CashAccount | CardAccount;
 
 // Transaction Types
-export type TransactionType = 'income' | 'expense' | 'transfer' | 'debt_payment';
+export type TransactionType = 'income' | 'expense' | 'transfer' | 'debt_payment' | 'borrowed' | 'lent';
 
 export interface Transaction {
   id: string;
@@ -66,9 +66,11 @@ export interface Debt {
   personName: string;
   amount: number;
   description?: string;
+  accountId: string; // Added: Which account the money came from/went to
   date: Date;
   dueDate?: Date;
-  status: 'active' | 'closed';
+  status: 'active' | 'completed';
+  transactionId?: string; // Added: Reference to the transaction created
   createdAt: Date;
   updatedAt: Date;
 }
@@ -209,9 +211,11 @@ export interface DatabaseDebt {
   person_name: string;
   amount: number;
   description?: string;
+  account_id: string;
   date: string;
   due_date?: string;
-  status: 'active' | 'closed';
+  status: 'active' | 'completed';
+  transaction_id?: string;
   created_at: string;
   updated_at: string;
 }

@@ -31,7 +31,6 @@ export function ThemeProvider({ children, initialTheme = 'system' }: ThemeProvid
       const dbPreferences = database.getUserPreferences();
       setThemeMode(dbPreferences.theme);
     } catch (error) {
-      console.log('Error loading theme from database:', error);
       // Fallback to initial theme
     }
   }, []);

@@ -68,6 +68,7 @@ export function useSecureStorage(key: string): UseStateHook<string> {
 
 // Specific hooks for authentication data
 export const useAuthPin = () => useSecureStorage('auth_pin');
+export const useAIApiKey = () => useSecureStorage('gemini_api_key');
 // Removed useAuthSettings and useUserData - now handled via database
 
 // Helper functions for storing complex objects
