@@ -1,8 +1,12 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="FinancAAR Logo" width="160"/>
+<img src="assets/logo.png" alt="FinancAAR Logo" width="120" />
 
-**Offline-first, privacy-focused personal finance manager built with React Native**
+<br/>
+
+<strong>Offline-first, privacy-focused personal finance manager built with React Native</strong>
+
+<br/><br/>
 
 [![GitHub Stars](https://img.shields.io/github/stars/UserAAR/FinancAAR-Mobile?style=social)](https://github.com/UserAAR/FinancAAR-Mobile/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/UserAAR/FinancAAR-Mobile?style=social)](https://github.com/UserAAR/FinancAAR-Mobile/network/members)
