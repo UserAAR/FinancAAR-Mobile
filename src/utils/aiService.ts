@@ -187,7 +187,7 @@ CURRENT DATE & TIME CONTEXT:
               temperature: isAnalysis ? 0.3 : 0.7,
               topK: 40,
               topP: 0.95,
-              maxOutputTokens: isAnalysis ? 2048 : 768,
+              maxOutputTokens: isAnalysis ? 2048 : 2048,
             },
             safetySettings: [
               { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },

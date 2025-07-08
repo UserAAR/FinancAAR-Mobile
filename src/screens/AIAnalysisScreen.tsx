@@ -845,7 +845,6 @@ export default function AIAnalysisScreen({ navigation }: { navigation: any }) {
                 placeholder="Ask about your finances... (e.g., 'How can I save more?')"
                 placeholderTextColor={theme.colors.textSecondary}
                 multiline
-                maxLength={500}
               />
               <TouchableOpacity
                 style={[
