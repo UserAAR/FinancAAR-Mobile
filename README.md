@@ -180,6 +180,12 @@ All permissions are requested **just-in-time**, with graceful handling if denied
 * ESLint + Prettier configured via Expo defaults.  
 * Commit messages follow *Conventional Commits*.
 
+### Issue & Pull Request Workflow
+
+* Please use the **GitHub issue templates** located in `.github/ISSUE_TEMPLATE` when reporting bugs or proposing features. Providing complete information helps us triage and resolve tickets faster.
+* Pull Requests must follow the **PR template** (`.github/PULL_REQUEST_TEMPLATE.md`) and complete the checklist before review.
+* For general questions or support, open a thread in **GitHub Discussions** instead of filing an issue.
+
 ---
 
 ## 📝 License

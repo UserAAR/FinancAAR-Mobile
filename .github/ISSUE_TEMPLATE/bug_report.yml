@@ -1,0 +1,73 @@
+name: "🐛 Bug Report"
+description: "Report a reproducible bug impacting the normal usage of FinancAAR."
+title: "[Bug]: <short summary>"
+labels: ["bug", "needs triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Thanks for taking the time to help improve FinancAAR!**
+
+        ⚠️ *Before opening a new issue, please search existing issues to avoid duplicates.*
+
+  - type: input
+    id: environment
+    attributes:
+      label: "Environment"
+      description: "App version (`Settings → About`), OS version, device model/emulator."
+      placeholder: "FinancAAR 3.1.1 – Android 14 (Pixel 8)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Provide a clear, numbered list of steps so we can reproduce the issue."
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected Behaviour"
+      description: "What you expected to happen."
+      placeholder: "The balance should update immediately…"
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: "Actual Behaviour"
+      description: "What actually happened."
+      placeholder: "The app crashes with …"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Logs & Screenshots"
+      description: "Attach relevant logs, stack traces or screenshots."
+      placeholder: |
+        ```bash
+        TypeError: undefined is not an object (evaluating '...')
+        ```
+      render: bash
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: "Additional Context"
+      description: "Any other useful context or links."
+    validations:
+      required: false 

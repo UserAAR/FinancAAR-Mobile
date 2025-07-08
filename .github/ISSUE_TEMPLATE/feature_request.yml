@@ -1,0 +1,57 @@
+name: "💡 Feature Request"
+description: "Suggest an idea or enhancement for FinancAAR."
+title: "[Feature]: <short summary>"
+labels: ["enhancement", "needs triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **We love new ideas!** Before opening a feature request, please make sure no similar request already exists.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: "Problem Statement"
+      description: "Describe the user pain point this feature would address."
+      placeholder: "I often forget to …"
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: "Proposed Solution"
+      description: "A concise description of your preferred implementation."
+      placeholder: "Add an option to …"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives Considered"
+      placeholder: "Current workaround …"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: "Feature Scope"
+      description: "Estimate the size of the change."
+      options:
+        - Minor UI tweak
+        - New screen / component
+        - Major architectural change
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: "Additional Context"
+      description: "Links, screenshots, or anything else."
+    validations:
+      required: false 
