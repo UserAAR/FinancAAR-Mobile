@@ -1,3 +1,20 @@
+<div align="center">
+
+![FinancAAR Logo](https://img.shields.io/badge/FinancAAR-Offline%20Finance%20Manager-blueviolet?style=for-the-badge&logo=react)
+
+**Offline-first, privacy-focused personal finance manager built with React Native**
+
+[![GitHub Stars](https://img.shields.io/github/stars/UserAAR/FinancAAR-Mobile?style=social)](https://github.com/UserAAR/FinancAAR-Mobile/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/UserAAR/FinancAAR-Mobile?style=social)](https://github.com/UserAAR/FinancAAR-Mobile/network/members)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Issues](https://img.shields.io/github/issues/UserAAR/FinancAAR-Mobile)](https://github.com/UserAAR/FinancAAR-Mobile/issues)
+
+[Wiki](https://github.com/UserAAR/FinancAAR-Mobile/wiki) • [Report Bug](https://github.com/UserAAR/FinancAAR-Mobile/issues) • [Request Feature](https://github.com/UserAAR/FinancAAR-Mobile/issues)
+
+</div>
+
+---
+
 # FinancAAR – Personal Finance Manager (React Native / Expo)
 
 FinancAAR is a cross-platform (Android & iOS) personal-finance manager that helps you **track income & expenses, manage debts, analyse spending trends and generate beautifully formatted financial reports** – all offline and completely private.  
@@ -68,7 +85,7 @@ src/
 
 ```bash
 # 1. Clone repo
-$ git clone https://github.com/<you>/financaar-app.git && cd financaar-app
+$ git clone https://github.com/UserAAR/FinancAAR-Mobile.git && cd FinancAAR-Mobile
 
 # 2. Install deps
 $ npm i           # or yarn
@@ -224,3 +241,22 @@ Health Score = Savings Rate (40%) + Net Savings (30%) + Trend (20%) + Balance (1
 ---
 
 ## Features 
+
+### Why FinancAAR?
+
+- ✨ **Offline-First Personal Finance** – All data is stored locally using SQLite; no servers, no tracking.
+- 🏦 **Unlimited Accounts** – Create as many *Cash* and *Card* accounts as you need with custom colours & emoji icons.
+- 💸 **Comprehensive Transactions** – Fast add / edit flow supporting *income*, *expense*, *transfer* and *debt payment* types.
+- 🤝 **Debt Management** – Track who you owe (or who owes you), with status updates and visual summaries.
+- 📊 **Advanced Analytics** – Interactive charts for the last 7 days, month or any custom range; spot spending trends instantly.
+- 🧠 **AI Insights** – GPT-powered analysis delivers actionable tips to optimise your budget (processed fully on-device).
+- 🔔 **Smart Notifications** – Daily summary & personalised suggestions, scheduled locally so they work even when offline.
+- 🔐 **Solid Security** – 4- & 6-digit PIN, plus biometric unlock (Fingerprint / Face ID).
+- 📑 **Rich Reporting & Export** – Generate beautifully formatted **CSV**, **XLSX** and **PDF** reports; share via system sheet or save directly to `/Download`.
+- 🎨 **Dynamic Theming** – Light, Dark & System modes with instant switching.
+- 🚀 **Cross-platform** – Runs smoothly on Android & iOS, thanks to Hermes & Reanimated 3 optimisations.
+- 📈 **Financial Health Score** – Composite metric (0-100) based on savings rate, net savings & balance trends.
+
+---
+
+<p align="center">🚀 Finansal yolculuğunuza hemen <strong>FinancAAR</strong> ile başlayın – paranız kontrol altında, geleceğiniz güvende! 💰</p>
