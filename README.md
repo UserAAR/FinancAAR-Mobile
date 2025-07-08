@@ -249,7 +249,7 @@ Health Score = Savings Rate (40%) + Net Savings (30%) + Trend (20%) + Balance (1
 - 💸 **Comprehensive Transactions** – Fast add / edit flow supporting *income*, *expense*, *transfer* and *debt payment* types.
 - 🤝 **Debt Management** – Track who you owe (or who owes you), with status updates and visual summaries.
 - 📊 **Advanced Analytics** – Interactive charts for the last 7 days, month or any custom range; spot spending trends instantly.
-- 🧠 **AI Insights** – GPT-powered analysis delivers actionable tips to optimise your budget (processed fully on-device).
+- 🧠 **AI Insights** – AI-powered analysis delivers actionable tips to optimise your budget (processed fully on-device).
 - 🔔 **Smart Notifications** – Daily summary & personalised suggestions, scheduled locally so they work even when offline.
 - 🔐 **Solid Security** – 4- & 6-digit PIN, plus biometric unlock (Fingerprint / Face ID).
 - 📑 **Rich Reporting & Export** – Generate beautifully formatted **CSV**, **XLSX** and **PDF** reports; share via system sheet or save directly to `/Download`.
@@ -259,4 +259,4 @@ Health Score = Savings Rate (40%) + Net Savings (30%) + Trend (20%) + Balance (1
 
 ---
 
-<p align="center">🚀 Finansal yolculuğunuza hemen <strong>FinancAAR</strong> ile başlayın – paranız kontrol altında, geleceğiniz güvende! 💰</p>
+<p align="center">🚀 Take charge of your financial journey with <strong>FinancAAR</strong> – where your money is in control and your future is secure! 💰</p>
