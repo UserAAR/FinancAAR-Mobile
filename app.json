@@ -26,11 +26,7 @@
       "permissions": [
         "USE_BIOMETRIC",
         "USE_FINGERPRINT"
-      ],
-      "notification": {
-        "icon": "./assets/notification-icon.png",
-        "color": "#00D2AA"
-      }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -49,6 +45,10 @@
       "eas": {
         "projectId": "27cb16ff-8aa3-4cef-9406-e502fad5996c"
       }
+    },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#00D2AA"
     }
   }
 }
