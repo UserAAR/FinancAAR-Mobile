@@ -1,6 +1,6 @@
 <div align="center">
 
-![FinancAAR Logo](https://img.shields.io/badge/FinancAAR-%20Finance%20Manager-blueviolet?style=for-the-badge&logo=react)
+<img src="assets/logo.png" alt="FinancAAR Logo" width="160"/>
 
 **Offline-first, privacy-focused personal finance manager built with React Native**
 
