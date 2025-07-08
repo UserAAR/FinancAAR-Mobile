@@ -10,14 +10,33 @@
 
 <strong>Offline-first, privacy-focused personal finance manager built with React Native</strong>
 
-<br/><br/>
+<br/>
 
-[![GitHub Stars](https://img.shields.io/github/stars/UserAAR/FinancAAR-Mobile?style=social)](https://github.com/UserAAR/FinancAAR-Mobile/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/UserAAR/FinancAAR-Mobile?style=social)](https://github.com/UserAAR/FinancAAR-Mobile/network/members)
-[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
-[![GitHub Issues](https://img.shields.io/github/issues/UserAAR/FinancAAR-Mobile)](https://github.com/UserAAR/FinancAAR-Mobile/issues)
+<p align="center">
+  <img src="https://img.shields.io/github/stars/UserAAR/FinancAAR-Mobile?style=social" alt="Stars" />
+  <img src="https://img.shields.io/github/forks/UserAAR/FinancAAR-Mobile?style=social" alt="Forks" />
+  <img src="https://img.shields.io/github/issues/UserAAR/FinancAAR-Mobile" alt="Issues" />
+  <img src="https://img.shields.io/badge/License-Proprietary-red.svg" alt="License" />
+  <img src="https://img.shields.io/github/last-commit/UserAAR/FinancAAR-Mobile" alt="Last Commit" />
+</p>
 
-[Live Demo](https://financaar.rf.gd) • [Documentation](https://github.com/UserAAR/FinancAAR-Mobile/wiki) • [Report Bug](https://github.com/UserAAR/FinancAAR-Mobile/issues) • [Request Feature](https://github.com/UserAAR/FinancAAR-Mobile/issues)
+
+
+
+<p align="center">
+  <a href="https://financaar.rf.gd" target="_blank">
+    <img src="https://img.shields.io/badge/Live%20Demo-%F0%9F%9A%80%20Open-blueviolet?style=for-the-badge&logo=kdenlive" alt="Live Demo" />
+  </a>
+  <a href="https://github.com/UserAAR/FinancAAR-Mobile/wiki" target="_blank">
+    <img src="https://img.shields.io/badge/Documentation-%F0%9F%93%9A%20Read-blue?style=for-the-badge&logo=readthedocs" alt="Documentation" />
+  </a>
+  <a href="https://github.com/UserAAR/FinancAAR-Mobile/issues" target="_blank">
+    <img src="https://img.shields.io/badge/Report%20Bug-%F0%9F%90%9B%20Submit-red?style=for-the-badge&logo=bugatti" alt="Report Bug" />
+  </a>
+  <a href="https://github.com/UserAAR/FinancAAR-Mobile/issues" target="_blank">
+    <img src="https://img.shields.io/badge/Request%20Feature-%E2%9C%A8%20Suggest-blueviolet?style=for-the-badge&logo=gitbook" alt="Request Feature" />
+  </a>
+</p>
 
 </div>
 
