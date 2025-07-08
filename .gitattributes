@@ -1,0 +1,74 @@
+# -----------------------------
+# GitHub Linguist Configuration
+# -----------------------------
+# Purpose: Ensure accurate language statistics and proper syntax highlighting
+# for the FinancAAR project. See: https://github.com/github/linguist
+
+# -------------------
+# Source Code: Mobile
+# -------------------
+# TypeScript & React Native
+*.ts   linguist-detectable=true
+*.tsx  linguist-detectable=true
+
+# JavaScript (fallback / tooling)
+*.js   linguist-detectable=true
+*.jsx  linguist-detectable=true
+
+# -------------------
+# Styling & Mark-up
+# -------------------
+*.css  linguist-detectable=true
+*.scss linguist-detectable=true
+
+# -------------
+# Configuration
+# -------------
+*.json  linguist-detectable=true
+*.yml   linguist-detectable=true
+*.yaml  linguist-detectable=true
+app.json linguist-detectable=true
+
+# ------------------
+# Native Code (Expo)
+# ------------------
+# Android
+*.java linguist-detectable=true
+*.kt   linguist-detectable=true
+*.xml  linguist-detectable=true
+
+# iOS
+*.swift  linguist-detectable=true
+*.m      linguist-detectable=true
+*.mm     linguist-detectable=true
+*.plist  linguist-detectable=true
+
+# --------
+# Scripting
+# --------
+*.sh linguist-detectable=true
+
+# --------------
+# Documentation
+# --------------
+*.md        linguist-documentation=true
+docs/**     linguist-documentation=true
+
+# -----------------------
+# Tests & Sample Fixtures
+# -----------------------
+__tests__/** linguist-tags=test
+tests/**     linguist-tags=test
+
+# -------------------
+# Non-Source Artifacts
+# -------------------
+# Treat common lockfiles and build outputs as non-detectable so they don’t skew
+# language statistics.
+package-lock.json linguist-detectable=false
+yarn.lock         linguist-detectable=false
+pnpm-lock.yaml    linguist-detectable=false
+build/**          linguist-detectable=false
+android/**/build/** linguist-detectable=false
+ios/**/build/**   linguist-detectable=false
+node_modules/**   linguist-detectable=false 
