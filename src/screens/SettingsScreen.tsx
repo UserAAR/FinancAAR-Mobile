@@ -721,7 +721,7 @@ export default function SettingsScreen() {
         },
       ],
     },
-    __DEV__ ? {
+    {
       title: 'Developer Settings',
       items: [
         {
@@ -734,7 +734,7 @@ export default function SettingsScreen() {
           requiresSecurity: true,
         },
       ],
-    } : null,
+    },
     {
       title: 'Notifications',
       items: [
@@ -841,7 +841,7 @@ export default function SettingsScreen() {
         },
       ],
     },
-  ] as const).filter(Boolean) as Array<{ title: string; items: any[] }>;
+  ]).filter(Boolean) as Array<{ title: string; items: any[] }>;
 
   const renderSettingItem = (item: SettingItem) => (
     <TouchableOpacity

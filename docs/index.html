@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinancAAR – Personal Finance Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="container">
+      <a href="#" class="logo-link"><img src="../assets/logo.png" alt="FinancAAR Logo" class="logo" /></a>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#screens">Screenshots</a>
+        <a href="#download">Download</a>
+        <a href="https://github.com/UserAAR/FinancAAR-Mobile" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-content">
+      <div class="hero-text">
+        <h1>Take Control of Your <span class="accent">Finances</span></h1>
+        <p class="subtitle">Offline-first, privacy-focused personal finance manager for Android & iOS.</p>
+        <div class="cta-group">
+          <a href="#download" class="btn primary">Download APK</a>
+          <a href="https://github.com/UserAAR/FinancAAR-Mobile" class="btn outline" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+      </div>
+      <div class="hero-mockup">
+        <img src="assets/home.jpg" alt="App mockup" id="hero-mockup-img" />
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <div class="container">
+      <h2 class="section-title">Why FinancAAR?</h2>
+      <div class="features-grid">
+        <div class="feature-item">
+          <h3>Offline-First</h3>
+          <p>All data is stored locally using SQLite; no servers, no tracking.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Biometric Security</h3>
+          <p>Secure your data with PIN or fingerprint / Face ID authentication.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Advanced Analytics</h3>
+          <p>Visualise spending trends with dynamic charts and AI insights.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Rich Export Options</h3>
+          <p>Generate beautifully formatted CSV, XLSX and PDF reports.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Unlimited Accounts</h3>
+          <p>Create as many cash or card accounts as you need, complete with custom colours and emoji icons.</p>
+        </div>
+        <div class="feature-item">
+          <h3>Smart Notifications</h3>
+          <p>Get daily summaries and personalised tips — scheduled locally so they work offline.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screens" class="screenshots">
+    <div class="container">
+      <h2 class="section-title">App Screens</h2>
+      <div class="carousel" id="carousel">
+        <button class="carousel-btn prev" aria-label="Previous slide">&#10094;</button>
+        <div class="slides">
+          <img src="assets/opening.jpg" alt="Welcome Screen" />
+          <img src="assets/home.jpg" alt="Home Screen" />
+          <img src="assets/all-transactions.jpg" alt="All Transactions" />
+          <img src="assets/add-transactions.jpg" alt="Add Transaction" />
+          <img src="assets/analytics-1.jpg" alt="Analytics Chart 1" />
+          <img src="assets/analytics-2.jpg" alt="Analytics Chart 2" />
+          <img src="assets/analytics-AIanalyze.jpg" alt="AI Insights" />
+          <img src="assets/debt-borrow.jpg" alt="Borrow Debt" />
+          <img src="assets/debts-lent.jpg" alt="Lent Debt" />
+          <img src="assets/settings-1.jpg" alt="Settings General" />
+          <img src="assets/settings-2.jpg" alt="Settings Theme" />
+          <img src="assets/settings-3.jpg" alt="Settings Export" />
+        </div>
+        <button class="carousel-btn next" aria-label="Next slide">&#10095;</button>
+        <div class="carousel-indicators" id="indicators"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download" class="download">
+    <div class="container">
+      <h2 class="section-title">Get Started Today</h2>
+      <p class="subtitle">Download the latest release and take charge of your financial future.</p>
+      <a href="https://github.com/UserAAR/FinancAAR-Mobile/releases" class="btn primary" target="_blank" rel="noopener">Latest APK & Releases</a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-flex">
+      <p>© <span id="year"></span> FinancAAR. All rights reserved.</p>
+      <div class="socials">
+        <a href="https://github.com/UserAAR" target="_blank" rel="noopener" aria-label="GitHub"><svg height="24" viewBox="0 0 16 16" fill="#FFFFFF"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.533 5.47 7.59.4.074.55-.173.55-.385 0-.19-.007-.693-.01-1.36-2.226.483-2.695-1.073-2.695-1.073-.364-.923-.89-1.168-.89-1.168-.727-.497.055-.487.055-.487.803.057 1.227.825 1.227.825.715 1.225 1.874.87 2.33.666.072-.517.28-.87.508-1.07-1.777-.2-3.644-.888-3.644-3.957 0-.874.314-1.588.824-2.148-.083-.202-.357-1.015.078-2.117 0 0 .672-.215 2.2.82a7.66 7.66 0 012.003-.27c.68.003 1.36.092 2.003.27 1.527-1.035 2.198-.82 2.198-.82.437 1.102.163 1.915.08 2.117.513.56.823 1.274.823 2.148 0 3.077-1.87 3.754-3.65 3.952.288.25.543.739.543 1.49 0 1.074-.01 1.94-.01 2.2 0 .214.15.462.55.384C13.71 14.532 16 11.54 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html> 
