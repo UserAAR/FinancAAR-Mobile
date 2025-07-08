@@ -1,6 +1,6 @@
 <div align="center">
 
-![FinancAAR Logo](https://img.shields.io/badge/FinancAAR-Offline%20Finance%20Manager-blueviolet?style=for-the-badge&logo=react)
+![FinancAAR Logo](https://img.shields.io/badge/FinancAAR-%20Finance%20Manager-blueviolet?style=for-the-badge&logo=react)
 
 **Offline-first, privacy-focused personal finance manager built with React Native**
 
@@ -15,7 +15,7 @@
 
 ---
 
-# FinancAAR – Personal Finance Manager (React Native / Expo)
+# FinancAAR – Personal Finance Manager 
 
 FinancAAR is a cross-platform (Android & iOS) personal-finance manager that helps you **track income & expenses, manage debts, analyse spending trends and generate beautifully formatted financial reports** – all offline and completely private.  
 This repository hosts the *production-ready source code* for the mobile client.
