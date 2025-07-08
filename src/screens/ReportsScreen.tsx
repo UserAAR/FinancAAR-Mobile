@@ -34,7 +34,7 @@ export default function ReportsScreen() {
     try {
       setIsGenerating(true);
       const uri = await generateFile({
-        types: ['transactions', 'debts', 'balances', 'categories'],
+        types: ['accounts', 'debts', 'transactions'],
         format: selectedFormat,
       });
 
