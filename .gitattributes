@@ -51,7 +51,6 @@ app.json linguist-detectable=true
 # --------------
 # Documentation
 # --------------
-*.md        linguist-documentation=true
 docs/**     linguist-documentation=true
 
 # -----------------------
