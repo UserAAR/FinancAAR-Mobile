@@ -4,7 +4,7 @@
 
 <br/>
 
-<img src="https://img.shields.io/badge/FinancAAR%20Finance%20Manager-blueviolet?style=for-the-badge" alt="FinancAAR Finance Manager Badge" />
+<img src="https://img.shields.io/badge/FinancAAR-%20Finance%20Manager-blueviolet?style=for-the-badge" alt="FinancAAR Finance Manager Badge" />
 
 <br/>
 
