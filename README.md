@@ -6,7 +6,7 @@
 
 [![GitHub Stars](https://img.shields.io/github/stars/UserAAR/FinancAAR-Mobile?style=social)](https://github.com/UserAAR/FinancAAR-Mobile/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/UserAAR/FinancAAR-Mobile?style=social)](https://github.com/UserAAR/FinancAAR-Mobile/network/members)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![GitHub Issues](https://img.shields.io/github/issues/UserAAR/FinancAAR-Mobile)](https://github.com/UserAAR/FinancAAR-Mobile/issues)
 
 [Wiki](https://github.com/UserAAR/FinancAAR-Mobile/wiki) • [Report Bug](https://github.com/UserAAR/FinancAAR-Mobile/issues) • [Request Feature](https://github.com/UserAAR/FinancAAR-Mobile/issues)
@@ -176,7 +176,7 @@ All permissions are requested **just-in-time**, with graceful handling if denied
 
 ## 📝 License
 
-This project is licensed under the **MIT License** – see [`LICENSE`](LICENSE) for details.
+FinancAAR is distributed under a **Proprietary License**. You may freely download and use the compiled APK for personal, non-commercial purposes. Any other use—including but not limited to reproducing, modifying, or redistributing the source code—requires prior written permission from **UserAAR**. See [`LICENSE`](LICENSE) for full terms.
 
 ---
 
