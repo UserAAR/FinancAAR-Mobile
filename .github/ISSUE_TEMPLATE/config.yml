@@ -1,3 +1,4 @@
+# Removed contact_links until GitHub Discussions is enabled for the repository
 blank_issues_enabled: false
 contact_links:
   - name: "💬 Questions & Support"

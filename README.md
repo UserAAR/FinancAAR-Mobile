@@ -188,6 +188,18 @@ All permissions are requested **just-in-time**, with graceful handling if denied
 
 ---
 
+## 📚 Documentation
+
+Detailed technical documentation now lives in the [`docs/`](./docs) directory:
+
+- [Architecture Overview](docs/architecture-overview.md)
+- [Database Schema](docs/database-schema.md)
+- [Architecture Decision Records](docs/adr/)
+
+For general questions or implementation discussions, please open a thread in **[GitHub Discussions](https://github.com/UserAAR/FinancAAR-Mobile/discussions)**.
+
+---
+
 ## 📝 License
 
 FinancAAR is distributed under a **Proprietary License**. You may freely download and use the compiled APK for personal, non-commercial purposes. Any other use—including but not limited to reproducing, modifying, or redistributing the source code—requires prior written permission from **UserAAR**. See [`LICENSE`](LICENSE) for full terms.
