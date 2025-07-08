@@ -185,6 +185,8 @@ All permissions are requested **just-in-time**, with graceful handling if denied
 * Please use the **GitHub issue templates** located in `.github/ISSUE_TEMPLATE` when reporting bugs or proposing features. Providing complete information helps us triage and resolve tickets faster.
 * Pull Requests must follow the **PR template** (`.github/PULL_REQUEST_TEMPLATE.md`) and complete the checklist before review.
 * For general questions or support, open a thread in **GitHub Discussions** instead of filing an issue.
+* By participating in this project you agree to abide by our **[Code of Conduct](.github/CODE_OF_CONDUCT.md)**.
+* Detailed development guidelines are available in **[CONTRIBUTING.md](.github/CONTRIBUTING.md)**.
 
 ---
 
