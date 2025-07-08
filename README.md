@@ -259,4 +259,4 @@ Health Score = Savings Rate (40%) + Net Savings (30%) + Trend (20%) + Balance (1
 
 ---
 
-<p align="center">🚀 Take charge of your financial journey with <strong>FinancAAR</strong> – where your money is in control and your future is secure! 💰</p>
+<p align="center">🚀 Take charge of your financial journey with <strong>FinancAAR</strong> – where your money is in control and your future is secure!💰</p>
