@@ -17,7 +17,7 @@
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![GitHub Issues](https://img.shields.io/github/issues/UserAAR/FinancAAR-Mobile)](https://github.com/UserAAR/FinancAAR-Mobile/issues)
 
-[Wiki](https://github.com/UserAAR/FinancAAR-Mobile/wiki) • [Report Bug](https://github.com/UserAAR/FinancAAR-Mobile/issues) • [Request Feature](https://github.com/UserAAR/FinancAAR-Mobile/issues)
+[Live Demo](https://financaar.rf.gd) • [Documentation](https://github.com/UserAAR/FinancAAR-Mobile/wiki) • [Report Bug](https://github.com/UserAAR/FinancAAR-Mobile/issues) • [Request Feature](https://github.com/UserAAR/FinancAAR-Mobile/issues)
 
 </div>
 
