@@ -6,6 +6,7 @@ export interface CashAccount {
   id: string;
   name: string;
   balance: number;
+  color?: string;
   emoji?: string;
   description?: string;
   type: 'cash';

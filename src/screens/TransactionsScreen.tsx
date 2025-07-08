@@ -18,6 +18,7 @@ import { Transaction, Account, Category } from '../types';
 
 type FilterType = 'monthly' | 'yearly' | 'account';
 type PeriodFilter = 'week' | 'month' | '3months' | '6months' | 'year' | 'all';
+type GroupingType = 'day' | 'week' | 'month';
 
 export default function TransactionsScreen() {
   const { theme } = useTheme();
@@ -29,10 +30,11 @@ export default function TransactionsScreen() {
   const [filterType, setFilterType] = useState<FilterType>('monthly');
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>('month');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+  const [selectedGrouping, setSelectedGrouping] = useState<GroupingType>('month');
 
   useEffect(() => {
     loadData();
-  }, [selectedPeriod, selectedAccountId]);
+  }, [selectedPeriod, selectedAccountId, selectedGrouping]);
 
   const loadData = async () => {
     try {
@@ -149,6 +151,57 @@ export default function TransactionsScreen() {
     return account?.name || 'Unknown';
   };
 
+  const groupTransactionsByDay = () => {
+    const grouped: { [key: string]: Transaction[] } = {};
+    
+    transactions.forEach(transaction => {
+      const dayKey = new Intl.DateTimeFormat('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      }).format(transaction.date);
+      
+      if (!grouped[dayKey]) {
+        grouped[dayKey] = [];
+      }
+      grouped[dayKey].push(transaction);
+    });
+    
+    return grouped;
+  };
+
+  const groupTransactionsByWeek = () => {
+    const grouped: { [key: string]: Transaction[] } = {};
+    
+    transactions.forEach(transaction => {
+      const date = transaction.date;
+      const startOfWeek = new Date(date);
+      const day = startOfWeek.getDay();
+      const diff = startOfWeek.getDate() - day;
+      startOfWeek.setDate(diff);
+      
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      
+      const weekKey = `Week of ${new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }).format(startOfWeek)} - ${new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }).format(endOfWeek)}`;
+      
+      if (!grouped[weekKey]) {
+        grouped[weekKey] = [];
+      }
+      grouped[weekKey].push(transaction);
+    });
+    
+    return grouped;
+  };
+
   const groupTransactionsByMonth = () => {
     const grouped: { [key: string]: Transaction[] } = {};
     
@@ -167,6 +220,19 @@ export default function TransactionsScreen() {
     return grouped;
   };
 
+  const getGroupedTransactions = () => {
+    switch (selectedGrouping) {
+      case 'day':
+        return groupTransactionsByDay();
+      case 'week':
+        return groupTransactionsByWeek();
+      case 'month':
+        return groupTransactionsByMonth();
+      default:
+        return groupTransactionsByMonth();
+    }
+  };
+
   const renderTransaction = ({ item }: { item: Transaction }) => (
     <View style={styles.transactionItem}>
       <View style={[styles.transactionIcon, { backgroundColor: getTransactionColor(item.type) + '20' }]}>
@@ -179,7 +245,10 @@ export default function TransactionsScreen() {
       <View style={styles.transactionDetails}>
         <Text style={styles.transactionTitle}>{item.title}</Text>
         <Text style={styles.transactionSubtitle}>
-          {getAccountName(item.accountId)} • {formatDate(item.date)}
+          {item.type === 'transfer' 
+            ? `${getAccountName(item.accountId)} → ${getAccountName(item.toAccountId || '')} • ${formatDate(item.date)}`
+            : `${getAccountName(item.accountId)} • ${formatDate(item.date)}`
+          }
         </Text>
         {item.description && (
           <Text style={styles.transactionDescription}>{item.description}</Text>
@@ -201,15 +270,15 @@ export default function TransactionsScreen() {
     </View>
   );
 
-  const renderMonthlyGroup = () => {
-    const grouped = groupTransactionsByMonth();
+  const renderGroupedTransactions = () => {
+    const grouped = getGroupedTransactions();
     
     return (
       <ScrollView showsVerticalScrollIndicator={false}>
-        {Object.entries(grouped).map(([month, monthTransactions]) => (
-          <View key={month} style={styles.monthGroup}>
-            <Text style={styles.monthHeader}>{month}</Text>
-            {monthTransactions.map((transaction) => (
+        {Object.entries(grouped).map(([groupKey, groupTransactions]) => (
+          <View key={groupKey} style={styles.groupContainer}>
+            <Text style={styles.groupHeader}>{groupKey}</Text>
+            {groupTransactions.map((transaction) => (
               <View key={transaction.id}>
                 {renderTransaction({ item: transaction })}
               </View>
@@ -227,6 +296,12 @@ export default function TransactionsScreen() {
     { key: '6months', label: '6M' },
     { key: 'year', label: 'Year' },
     { key: 'all', label: 'All' },
+  ];
+
+  const groupingFilters: { key: GroupingType; label: string; icon: string }[] = [
+    { key: 'day', label: 'Daily', icon: 'calendar' },
+    { key: 'week', label: 'Weekly', icon: 'calendar-outline' },
+    { key: 'month', label: 'Monthly', icon: 'calendar-clear' },
   ];
 
   const styles = StyleSheet.create({
@@ -250,11 +325,11 @@ export default function TransactionsScreen() {
       marginLeft: theme.spacing.md,
     },
     filterContainer: {
-      padding: theme.spacing.md,
+      padding: theme.spacing.sm,
     },
     filterRow: {
       flexDirection: 'row',
-      marginBottom: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
     },
     filterChip: {
       backgroundColor: theme.colors.surface,
@@ -282,10 +357,48 @@ export default function TransactionsScreen() {
       flexWrap: 'wrap',
       gap: theme.spacing.sm,
     },
+    groupingContainer: {
+      marginTop: theme.spacing.xs,
+    },
+    sectionLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginHorizontal: theme.spacing.sm,
+      marginBottom: theme.spacing.xs,
+    },
+    groupingChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      marginRight: theme.spacing.sm,
+      borderWidth: 2,
+      borderColor: theme.colors.primary + '20',
+    },
+    activeGroupingChip: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    groupingIcon: {
+      marginRight: theme.spacing.xs,
+    },
+    groupingText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    activeGroupingText: {
+      color: 'white',
+    },
     summaryCard: {
       backgroundColor: theme.colors.surface,
-      margin: theme.spacing.md,
-      padding: theme.spacing.lg,
+      marginHorizontal: theme.spacing.sm,
+      marginTop: theme.spacing.xs,
+      marginBottom: theme.spacing.xs,
+      padding: theme.spacing.md,
       borderRadius: theme.borderRadius.lg,
       ...theme.shadows?.medium,
     },
@@ -302,22 +415,22 @@ export default function TransactionsScreen() {
     content: {
       flex: 1,
     },
-    monthGroup: {
+    groupContainer: {
       marginBottom: theme.spacing.lg,
     },
-    monthHeader: {
+    groupHeader: {
       fontSize: 18,
       fontWeight: '600',
       color: theme.colors.text,
-      marginHorizontal: theme.spacing.md,
-      marginBottom: theme.spacing.md,
-      marginTop: theme.spacing.sm,
+      marginHorizontal: theme.spacing.sm,
+      marginBottom: theme.spacing.sm,
+      marginTop: theme.spacing.xs,
     },
     transactionItem: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.surface,
-      marginHorizontal: theme.spacing.md,
+      marginHorizontal: theme.spacing.sm,
       marginVertical: theme.spacing.xs,
       padding: theme.spacing.md,
       borderRadius: theme.borderRadius.md,
@@ -475,6 +588,36 @@ export default function TransactionsScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        {/* Grouping Filters */}
+        <View style={styles.groupingContainer}>
+          <Text style={styles.sectionLabel}>Group by:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+            {groupingFilters.map((filter) => (
+              <TouchableOpacity
+                key={filter.key}
+                style={[
+                  styles.groupingChip,
+                  selectedGrouping === filter.key && styles.activeGroupingChip,
+                ]}
+                onPress={() => setSelectedGrouping(filter.key)}
+              >
+                <Ionicons 
+                  name={filter.icon as any} 
+                  size={16} 
+                  color={selectedGrouping === filter.key ? 'white' : theme.colors.primary} 
+                  style={styles.groupingIcon}
+                />
+                <Text style={[
+                  styles.groupingText,
+                  selectedGrouping === filter.key && styles.activeGroupingText,
+                ]}>
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       </View>
 
       {/* Summary Card */}
@@ -498,7 +641,7 @@ export default function TransactionsScreen() {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-            {renderMonthlyGroup()}
+            {renderGroupedTransactions()}
           </ScrollView>
         ) : (
           <View style={styles.emptyState}>

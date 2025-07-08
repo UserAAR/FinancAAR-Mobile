@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import Constants from 'expo-constants';
 
 interface AppLogoProps {
   size?: 'small' | 'medium' | 'large' | 'xl';
@@ -72,29 +73,29 @@ export default function AppLogo({
       color: theme.colors.textSecondary,
       marginTop: 2,
     },
-          versionText: {
-        fontSize: sizeConfig.fontSize * 0.4,
-        color: theme.colors.textSecondary,
-        marginTop: 2,
-        fontStyle: 'italic',
-      },
-      // Original container style for text-only
-      textLogoContainer: {
-        backgroundColor: 'transparent',
-        paddingHorizontal: sizeConfig.spacing * 1.8,
-        paddingVertical: sizeConfig.spacing * 0.6,
-        borderRadius: sizeConfig.spacing * 1.8,
-        borderWidth: 3.2,
-        borderColor: theme.colors.primary,
-      },
-      textLogo: {
-        fontSize: sizeConfig.fontSize * 0.9,
-        fontWeight: '800',
-        color: theme.colors.primary,
-        letterSpacing: 0.5,
-        textAlign: 'center',
-      },
-    });
+    versionText: {
+      fontSize: sizeConfig.fontSize * 0.4,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+      fontStyle: 'italic',
+    },
+    // Original container style for text-only
+    textLogoContainer: {
+      backgroundColor: 'transparent',
+      paddingHorizontal: sizeConfig.spacing * 1.8,
+      paddingVertical: sizeConfig.spacing * 0.6,
+      borderRadius: sizeConfig.spacing * 1.8,
+      borderWidth: 3.2,
+      borderColor: theme.colors.primary,
+    },
+    textLogo: {
+      fontSize: sizeConfig.fontSize * 0.9,
+      fontWeight: '800',
+      color: theme.colors.primary,
+      letterSpacing: 0.5,
+      textAlign: 'center',
+    },
+  });
 
   // Icon-only variant
   if (variant === 'icon-only') {
@@ -117,7 +118,7 @@ export default function AppLogo({
           <Text style={styles.textLogo}>FinancAAR</Text>
         </View>
         {showVersion && (
-          <Text style={styles.versionText}>v2.1.0</Text>
+          <Text style={styles.versionText}>v{Constants.expoConfig?.version || '3.1.1'}</Text>
         )}
       </View>
     );
@@ -135,7 +136,7 @@ export default function AppLogo({
         <Text style={styles.appName}>FinancAAR</Text>
         <Text style={styles.appTagline}>Personal Finance</Text>
         {showVersion && (
-          <Text style={styles.versionText}>v2.1.0</Text>
+          <Text style={styles.versionText}>v{Constants.expoConfig?.version || '3.1.1'}</Text>
         )}
       </View>
     </View>

@@ -51,7 +51,9 @@ export default function AddTransactionScreen() {
     // Load categories based on selected type
     if (selectedType !== 'transfer') {
       const categoryData = database.getCategories(selectedType === 'income' ? 'income' : 'expense');
-      setCategories(categoryData);
+      const hidden = ['Debt Repayment', 'Lent Money', 'Borrowed Money', 'Debt Repayment Received'];
+      const filtered = categoryData.filter(cat => !hidden.includes(cat.name));
+      setCategories(filtered);
       
       // Reset category selection when type changes
       setSelectedCategory(null);
@@ -81,7 +83,7 @@ export default function AddTransactionScreen() {
         amount: parseFloat(amount),
         title: title.trim(),
         description: description.trim() || undefined,
-        categoryId: selectedCategory?.id || '',
+        categoryId: selectedType === 'transfer' ? '' : (selectedCategory?.id || ''),
         accountId: selectedAccount!.id,
         toAccountId: selectedType === 'transfer' ? toAccount?.id : undefined,
         date: new Date(),
@@ -171,6 +173,7 @@ export default function AddTransactionScreen() {
         return false;
       }
     } else {
+      // Only check category for income and expense transactions, not for transfers
       if (!selectedCategory) {
         alert.error('No Category Selected', 'Please select a category for your transaction.');
         return false;

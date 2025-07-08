@@ -16,10 +16,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useBiometric } from '../hooks/useBiometric';
 import { useAlert, useToast, useNotification } from '../hooks/useNotification';
 import { database } from '../utils/database';
-import { Account, CardAccount } from '../types';
+import { Account, CardAccount, CashAccount } from '../types';
 import AppLogo from '../components/AppLogo';
 import { useAIApiKey } from '../hooks/useSecureStorage';
 import * as Crypto from 'expo-crypto';
+import { localNotificationService } from '../services/LocalNotificationService';
+import Constants from 'expo-constants';
+import { ExportDataType, ExportFormat, generateFile, shareFile, saveToDownloads, ALL_EXPORT_DATA_TYPES } from '../utils/exporter';
 
 type SettingItem = {
   id: string;
@@ -63,6 +66,7 @@ export default function SettingsScreen() {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [editAccountName, setEditAccountName] = useState('');
   const [editAccountBalance, setEditAccountBalance] = useState('');
+  const [editAccountEmoji, setEditAccountEmoji] = useState('');
   const [editAccountColor, setEditAccountColor] = useState('#00D2AA');
   const [newAccountType, setNewAccountType] = useState<'cash' | 'card'>('card');
   const [newAccountName, setNewAccountName] = useState('');
@@ -77,6 +81,16 @@ export default function SettingsScreen() {
   const [aiKeyState, setAIKeyState] = useAIApiKey();
   const currentAIKey = aiKeyState[1];
   const setCurrentAIKey = (value: string | null) => setAIKeyState(value);
+  
+  // Notification states
+  const [notificationEnabled, setNotificationEnabled] = useState(userPreferences.notifications);
+  const [permissionStatus, setPermissionStatus] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
+
+  const [showReportsModal, setShowReportsModal] = useState(false);
+  const [selectedDataTypes, setSelectedDataTypes] = useState<Set<ExportDataType>>(new Set(['transactions']));
+  const [selectedRange, setSelectedRange] = useState<'1d' | '1w' | '1m' | '3m' | '6m' | 'all'>('1m');
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const aiProviders: AIProvider[] = [
     { id: 'gemini', name: 'Google Gemini', description: 'Google\'s latest AI model', icon: 'diamond' },
@@ -96,7 +110,17 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     loadAccounts();
+    checkNotificationPermission();
   }, []);
+
+  const checkNotificationPermission = async () => {
+    try {
+      const status = await localNotificationService.getPermissionStatus();
+      setPermissionStatus(status);
+    } catch (error) {
+      console.error('Failed to check notification permission:', error);
+    }
+  };
 
   const loadAccounts = () => {
     const loadedAccounts = database.getAccounts();
@@ -328,7 +352,12 @@ export default function SettingsScreen() {
     setSelectedAccount(account);
     setEditAccountName(account.name);
     setEditAccountBalance(account.balance.toString());
-    setEditAccountColor(account.type === 'card' ? (account as CardAccount).color : '#00D2AA');
+    setEditAccountEmoji(account.emoji || '');
+    setEditAccountColor(
+      account.type === 'card' 
+        ? (account as CardAccount).color 
+        : (account as CashAccount).color || '#00D2AA'
+    );
     setShowAccountModal(true);
   };
 
@@ -348,17 +377,11 @@ export default function SettingsScreen() {
       const db = database as any;
       const now = new Date().toISOString();
       
-      if (selectedAccount.type === 'card') {
-        db.ensureDatabase().runSync(
-          'UPDATE accounts SET name = ?, balance = ?, color = ?, updated_at = ? WHERE id = ?',
-          [editAccountName.trim(), balance, editAccountColor, now, selectedAccount.id]
-        );
-      } else {
-        db.ensureDatabase().runSync(
-          'UPDATE accounts SET name = ?, balance = ?, updated_at = ? WHERE id = ?',
-          [editAccountName.trim(), balance, now, selectedAccount.id]
-        );
-      }
+      // Update both cash and card accounts with color
+      db.ensureDatabase().runSync(
+        'UPDATE accounts SET name = ?, balance = ?, color = ?, emoji = ?, updated_at = ? WHERE id = ?',
+        [editAccountName.trim(), balance, editAccountColor, editAccountEmoji, now, selectedAccount.id]
+      );
 
       setShowAccountModal(false);
       setSelectedAccount(null);
@@ -418,6 +441,7 @@ export default function SettingsScreen() {
           type: 'cash',
           name: newAccountName.trim(),
           balance,
+          color: newAccountColor,
           emoji: newAccountEmoji || undefined,
         });
       }
@@ -477,6 +501,53 @@ export default function SettingsScreen() {
     );
   };
 
+  // Notification functions
+  const handleNotificationToggle = async (enabled: boolean) => {
+    try {
+      if (enabled && permissionStatus !== 'granted') {
+        const hasPermission = await localNotificationService.requestPermissions();
+        if (!hasPermission) {
+          alert.error('Permission Denied', 'Notifications require permission. Please enable notifications in your device settings.');
+          return;
+        }
+        setPermissionStatus('granted');
+      }
+
+      await updateUserPreferences({ notifications: enabled });
+      setNotificationEnabled(enabled);
+
+      if (enabled) {
+        await localNotificationService.scheduleDailyNotifications();
+        toast.success('Notifications Enabled! 🔔', 'You\'ll receive daily financial tips and reminders');
+      } else {
+        await localNotificationService.cancelAllScheduledNotifications();
+        toast.success('Notifications Disabled', 'All scheduled notifications have been cancelled');
+      }
+    } catch (error) {
+      alert.error('Error', 'Failed to update notification settings');
+    }
+  };
+
+  const handleSendRandomNotification = async () => {
+    try {
+      const userName = authState.userName || 'Friend';
+      const { title, body } = localNotificationService.getRandomNotification(userName);
+      await localNotificationService.sendImmediateNotification(title, body);
+      toast.success('Notification Sent', 'A random notification has been delivered');
+    } catch (error) {
+      alert.error('Error', 'Failed to send notification');
+    }
+  };
+
+  const handleRescheduleNotifications = async () => {
+    try {
+      await localNotificationService.scheduleDailyNotifications();
+      toast.success('Notifications Rescheduled!', 'Fresh notification schedule has been created');
+    } catch (error) {
+      alert.error('Error', 'Failed to reschedule notifications');
+    }
+  };
+
   const handleDeveloperSettings = () => {
     requireSecurity(() => {
       setNewAPIKey(currentAIKey || '');
@@ -484,7 +555,55 @@ export default function SettingsScreen() {
     });
   };
 
-  const settingSections = [
+  const toggleDataType = (type: ExportDataType) => {
+    const newSet = new Set(selectedDataTypes);
+    if (newSet.has(type)) newSet.delete(type); else newSet.add(type);
+    setSelectedDataTypes(newSet);
+  };
+
+  const getRangeDates = (): { start?: Date; end?: Date } => {
+    const now = new Date();
+    if (selectedRange === 'all') return {};
+    const d = new Date();
+    switch (selectedRange) {
+      case '1d': d.setHours(0,0,0,0); return { start: d, end: now };
+      case '1w': d.setDate(d.getDate() - 6); return { start: d, end: now };
+      case '1m': d.setMonth(d.getMonth()); d.setDate(1); return { start: d, end: now };
+      case '3m': d.setMonth(d.getMonth() - 2); d.setDate(1); return { start: d, end: now };
+      case '6m': d.setMonth(d.getMonth() - 5); d.setDate(1); return { start: d, end: now };
+      default: return {};
+    }
+  };
+
+  const handleGenerate = async (action: 'download' | 'share') => {
+    if (isGeneratingReport) return;
+    try {
+      setIsGeneratingReport(true);
+      const opts = {
+        types: Array.from(selectedDataTypes),
+        format: exportFormat,
+        ...getRangeDates(),
+      } as any;
+      const uri = await generateFile(opts);
+
+      if (action === 'share') {
+        await shareFile(uri);
+        toast.success('Shared', 'Report share sheet opened');
+      } else {
+        const dest = await saveToDownloads(uri);
+        if (dest) {
+          toast.success('Downloaded', 'Report saved to Downloads');
+        }
+      }
+    } catch (e) {
+      console.error('Report generation failed', e);
+      alert.error('Export Error', 'Failed to generate report');
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const settingSections = ([
     {
       title: 'Account',
       items: [
@@ -602,7 +721,7 @@ export default function SettingsScreen() {
         },
       ],
     },
-    {
+    __DEV__ ? {
       title: 'Developer Settings',
       items: [
         {
@@ -613,6 +732,36 @@ export default function SettingsScreen() {
           type: 'navigation' as const,
           onPress: handleDeveloperSettings,
           requiresSecurity: true,
+        },
+      ],
+    } : null,
+    {
+      title: 'Notifications',
+      items: [
+        {
+          id: 'notifications',
+          title: 'Smart Notifications',
+          subtitle: notificationEnabled ? 'Receive daily financial tips & reminders' : 'Get personalized financial insights',
+          icon: 'notifications',
+          type: 'switch' as const,
+          value: notificationEnabled,
+          onToggle: handleNotificationToggle,
+        },
+        {
+          id: 'send-notification',
+          title: 'Send Notification',
+          subtitle: 'Deliver a random notification now',
+          icon: 'paper-plane',
+          type: 'action' as const,
+          onPress: handleSendRandomNotification,
+        },
+        {
+          id: 'reschedule-notifications',
+          title: 'Reschedule Notifications',
+          subtitle: 'Create fresh notification schedule',
+          icon: 'refresh',
+          type: 'action' as const,
+          onPress: handleRescheduleNotifications,
         },
       ],
     },
@@ -626,6 +775,19 @@ export default function SettingsScreen() {
           icon: 'color-palette',
           type: 'navigation' as const,
           onPress: handleThemeChange,
+        },
+      ],
+    },
+    {
+      title: 'Financial Reports',
+      items: [
+        {
+          id: 'financial-reports',
+          title: 'Generate Reports',
+          subtitle: 'Export and share financial data',
+          icon: 'document-text',
+          type: 'navigation' as const,
+          onPress: () => setShowReportsModal(true),
         },
       ],
     },
@@ -679,7 +841,7 @@ export default function SettingsScreen() {
         },
       ],
     },
-  ];
+  ] as const).filter(Boolean) as Array<{ title: string; items: any[] }>;
 
   const renderSettingItem = (item: SettingItem) => (
     <TouchableOpacity
@@ -839,7 +1001,9 @@ export default function SettingsScreen() {
     },
     modalButtons: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'center',
+      flexWrap: 'wrap',
+      gap: theme.spacing.sm,
       marginTop: theme.spacing.lg,
     },
     modalButton: {
@@ -849,8 +1013,24 @@ export default function SettingsScreen() {
       alignItems: 'center',
       marginHorizontal: theme.spacing.xs,
     },
+    reportButton: {
+      backgroundColor: theme.colors.primary,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.xl,
+      borderRadius: 30,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.15,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 4,
+      elevation: 3,
+    },
     cancelButton: {
       backgroundColor: theme.colors.surface,
+      borderRadius: 30,
+      paddingHorizontal: theme.spacing.xl,
     },
     confirmButton: {
       backgroundColor: theme.colors.primary,
@@ -952,11 +1132,13 @@ export default function SettingsScreen() {
     typeSelector: {
       flexDirection: 'row',
       alignItems: 'center',
+      flexWrap: 'wrap',
     },
     typeOption: {
       padding: theme.spacing.sm,
       borderRadius: theme.borderRadius.sm,
       marginHorizontal: theme.spacing.xs,
+      marginVertical: theme.spacing.xs,
     },
     selectedType: {
       backgroundColor: theme.colors.primary,
@@ -1191,7 +1373,7 @@ export default function SettingsScreen() {
         <View style={styles.appInfo}>
           <View style={styles.logoContainer}>
             <AppLogo size="large" variant="text-only" showVersion={false} />
-            <Text style={styles.appVersion}>Version 2.1.0</Text>
+            <Text style={styles.appVersion}>Version {Constants.expoConfig?.version || '3.1.1'}</Text>
           </View>
         </View>
       </ScrollView>
@@ -1437,7 +1619,7 @@ export default function SettingsScreen() {
                         { 
                           backgroundColor: item.type === 'card' 
                             ? (item as CardAccount).color || theme.colors.primary
-                            : theme.colors.primary 
+                            : (item as CashAccount).color || theme.colors.primary 
                         }
                       ]}>
                         <Text style={styles.accountEmoji}>
@@ -1535,29 +1717,41 @@ export default function SettingsScreen() {
               />
             </View>
 
-            {selectedAccount?.type === 'card' && (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Card Color</Text>
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false} 
-                  style={styles.colorPicker}
-                  contentContainerStyle={{ alignItems: 'center' }}
-                >
-                  {cardColors.map((color) => (
-                    <TouchableOpacity
-                      key={color}
-                      style={[
-                        styles.colorOption,
-                        { backgroundColor: color },
-                        editAccountColor === color && styles.selectedColor
-                      ]}
-                      onPress={() => setEditAccountColor(color)}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Emoji (Optional)</Text>
+              <TextInput
+                style={styles.input}
+                value={editAccountEmoji}
+                onChangeText={setEditAccountEmoji}
+                placeholder="Choose an emoji"
+                placeholderTextColor={theme.colors.textSecondary}
+                maxLength={2}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                {selectedAccount?.type === 'card' ? 'Card Color' : 'Account Color'}
+              </Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={styles.colorPicker}
+                contentContainerStyle={{ alignItems: 'center' }}
+              >
+                {cardColors.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      editAccountColor === color && styles.selectedColor
+                    ]}
+                    onPress={() => setEditAccountColor(color)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -1891,33 +2085,33 @@ export default function SettingsScreen() {
                 onChangeText={setNewAccountEmoji}
                 placeholder="Choose an emoji"
                 placeholderTextColor={theme.colors.textSecondary}
-                maxLength={1}
+                maxLength={2}
               />
             </View>
 
-            {newAccountType === 'card' && (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Card Color</Text>
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false} 
-                  style={styles.colorPicker}
-                  contentContainerStyle={{ alignItems: 'center' }}
-                >
-                  {cardColors.map((color) => (
-                    <TouchableOpacity
-                      key={color}
-                      style={[
-                        styles.colorOption,
-                        { backgroundColor: color },
-                        newAccountColor === color && styles.selectedColor
-                      ]}
-                      onPress={() => setNewAccountColor(color)}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                {newAccountType === 'card' ? 'Card Color' : 'Account Color'}
+              </Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={styles.colorPicker}
+                contentContainerStyle={{ alignItems: 'center' }}
+              >
+                {cardColors.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      newAccountColor === color && styles.selectedColor
+                    ]}
+                    onPress={() => setNewAccountColor(color)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -1940,6 +2134,113 @@ export default function SettingsScreen() {
               >
                 <Text style={[styles.modalButtonText, styles.confirmButtonText]}>
                   Add Account
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Reports Modal */}
+      <Modal
+        visible={showReportsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReportsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Financial Reports</Text>
+            <Text style={styles.modalSubtitle}>Select data types and range for your report</Text>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Data Types</Text>
+              {ALL_EXPORT_DATA_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.typeOption,
+                    selectedDataTypes.has(type) && styles.selectedType
+                  ]}
+                  onPress={() => toggleDataType(type)}
+                >
+                  <Text style={[
+                    styles.typeText,
+                    selectedDataTypes.has(type) && styles.selectedTypeText
+                  ]}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Date Range</Text>
+              <View style={styles.typeSelector}>
+                {['1d','1w','1m','3m','6m','all'].map((range) => (
+                  <TouchableOpacity
+                    key={range}
+                    style={[
+                      styles.typeOption,
+                      selectedRange === range && styles.selectedType
+                    ]}
+                    onPress={() => setSelectedRange(range as '1d' | '1w' | '1m' | '3m' | '6m' | 'all')}
+                  >
+                    <Text style={[
+                      styles.typeText,
+                      selectedRange === range && styles.selectedTypeText
+                    ]}>{range.toUpperCase()}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Export Format</Text>
+              <View style={styles.typeSelector}>
+                {['csv', 'xlsx', 'pdf'].map((format) => (
+                  <TouchableOpacity
+                    key={format}
+                    style={[
+                      styles.typeOption,
+                      exportFormat === format && styles.selectedType
+                    ]}
+                    onPress={() => setExportFormat(format as ExportFormat)}
+                  >
+                    <Text style={[
+                      styles.typeText,
+                      exportFormat === format && styles.selectedTypeText
+                    ]}>{format.toUpperCase()}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowReportsModal(false)}
+              >
+                <Text style={[styles.modalButtonText, styles.cancelButtonText]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.reportButton, { opacity: isGeneratingReport ? 0.6 : 1 }]}
+                onPress={() => handleGenerate('download')}
+                disabled={isGeneratingReport}
+              >
+                <Ionicons name="download" size={20} color="white" style={{marginRight: 4}} />
+                <Text style={[styles.modalButtonText, styles.confirmButtonText]}>
+                  Download
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.reportButton, { opacity: isGeneratingReport ? 0.6 : 1 }]}
+                onPress={() => handleGenerate('share')}
+                disabled={isGeneratingReport}
+              >
+                <Ionicons name="share-social" size={20} color="white" style={{marginRight: 4}} />
+                <Text style={[styles.modalButtonText, styles.confirmButtonText]}>
+                  Share
                 </Text>
               </TouchableOpacity>
             </View>

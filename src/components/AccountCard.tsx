@@ -16,7 +16,8 @@ export default function AccountCard({ account, onPress }: AccountCardProps) {
   const { theme } = useTheme();
 
   const getCardColor = () => {
-    if (account.type === 'card' && account.color) {
+    // Both cash and card accounts can have custom colors
+    if (account.color) {
       return account.color;
     }
     return theme.colors.primary;

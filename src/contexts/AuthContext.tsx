@@ -76,7 +76,7 @@ const defaultUserPreferences: UserPreferences = {
 
 const defaultAppSettings: AppSettings = {
   lastSyncDate: new Date().toISOString(),
-  appVersion: '2.1.0',
+  appVersion: '3.1.1',
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

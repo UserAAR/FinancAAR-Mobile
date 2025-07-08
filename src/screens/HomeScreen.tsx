@@ -20,6 +20,8 @@ import { Account, Transaction } from '../types';
 import AccountCard from '../components/AccountCard';
 import QuickStats from '../components/QuickStats';
 import AppLogo from '../components/AppLogo';
+import { localNotificationService } from '../services/LocalNotificationService';
+import { useAlert } from '../hooks/useNotification';
 
 const { width } = Dimensions.get('window');
 
@@ -36,9 +38,16 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentAccountIndex, setCurrentAccountIndex] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const alert = useAlert();
+  const [notificationStatus, setNotificationStatus] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
 
   useEffect(() => {
     loadData();
+    const fetchPermission = async () => {
+      const status = await localNotificationService.getPermissionStatus();
+      setNotificationStatus(status);
+    };
+    fetchPermission();
   }, []);
 
   const loadData = async () => {
@@ -99,6 +108,58 @@ export default function HomeScreen() {
       month: 'short',
       day: 'numeric',
     }).format(date);
+  };
+
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case 'income':
+        return 'arrow-down';
+      case 'expense':
+        return 'arrow-up';
+      case 'transfer':
+        return 'swap-horizontal';
+      case 'debt_payment':
+        return 'card';
+      case 'borrowed':
+        return 'person-add';
+      case 'lent':
+        return 'person-remove';
+      default:
+        return 'cash';
+    }
+  };
+
+  const getTransactionColor = (type: string) => {
+    switch (type) {
+      case 'income':
+        return theme.colors.success;
+      case 'expense':
+        return theme.colors.error;
+      case 'transfer':
+        return theme.colors.primary;
+      case 'debt_payment':
+        return theme.colors.warning;
+      case 'borrowed':
+        return '#9C27B0'; // Purple for borrowed money
+      case 'lent':
+        return '#FF6F00'; // Orange for lent money
+      default:
+        return theme.colors.text;
+    }
+  };
+
+  const getAccountName = (accountId: string) => {
+    const account = accounts.find(acc => acc.id === accountId);
+    return account?.name || 'Unknown';
+  };
+
+  const handleNotificationIconPress = async () => {
+    if (notificationStatus === 'granted') return;
+    const granted = await localNotificationService.requestPermissions();
+    setNotificationStatus(granted ? 'granted' : 'denied');
+    if (!granted) {
+      alert.warning('FinancAAR is quiet 🔕', 'Turn on notifications and never miss a thing!');
+    }
   };
 
   const styles = StyleSheet.create({
@@ -307,8 +368,12 @@ export default function HomeScreen() {
         <View style={styles.greetingContainer}>
           <Text style={styles.greeting}>{getGreeting()}</Text>
         </View>
-        <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons name="notifications-outline" size={24} color={theme.colors.primary} />
+        <TouchableOpacity style={styles.notificationButton} onPress={handleNotificationIconPress}>
+          <Ionicons 
+            name={notificationStatus === 'granted' ? 'notifications-outline' : 'notifications-off-outline'} 
+            size={24} 
+            color={notificationStatus === 'granted' ? theme.colors.primary : theme.colors.textSecondary} 
+          />
         </TouchableOpacity>
       </View>
 
@@ -353,22 +418,28 @@ export default function HomeScreen() {
         <>
           {recentTransactions.map((transaction) => (
             <View key={transaction.id} style={styles.transactionItem}>
-              <View style={styles.transactionIcon}>
+              <View style={[styles.transactionIcon, { backgroundColor: getTransactionColor(transaction.type) + '20' }]}>
                 <Ionicons 
-                  name={transaction.type === 'income' ? 'arrow-down' : 'arrow-up'} 
+                  name={getTransactionIcon(transaction.type)} 
                   size={20} 
-                  color={theme.colors.primary} 
+                  color={getTransactionColor(transaction.type)} 
                 />
               </View>
               <View style={styles.transactionDetails}>
                 <Text style={styles.transactionTitle}>{transaction.title}</Text>
-                <Text style={styles.transactionDate}>{formatDate(transaction.date)}</Text>
+                <Text style={styles.transactionDate}>
+                  {transaction.type === 'transfer' 
+                    ? `${getAccountName(transaction.accountId)} → ${getAccountName(transaction.toAccountId || '')} • ${formatDate(transaction.date)}`
+                    : formatDate(transaction.date)
+                  }
+                </Text>
               </View>
               <Text style={[
                 styles.transactionAmount,
-                { color: transaction.type === 'income' ? theme.colors.success : theme.colors.error }
+                { color: getTransactionColor(transaction.type) }
               ]}>
-                {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                {transaction.type === 'income' || transaction.type === 'borrowed' ? '+' : 
+                 transaction.type === 'transfer' ? '→' : '-'}{formatCurrency(transaction.amount)}
               </Text>
             </View>
           ))}

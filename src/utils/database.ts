@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import {
   Account,
+  CashAccount,
   CardAccount,
   Transaction,
   Category,
@@ -23,6 +24,7 @@ class DatabaseService {
       this.db = SQLite.openDatabaseSync('financaar.db');
       this.initializeTables();
       this.insertDefaultCategories();
+      this.ensureDebtCategories();
       this.fixInvalidIcons();
       this.removeBillsUtilitiesCategory();
       this.updateDebtsTable();
@@ -158,6 +160,8 @@ class DatabaseService {
         { name: 'Investment', icon: 'cash', color: '#FF9800' },
         { name: 'Gift', icon: 'gift', color: '#E91E63' },
         { name: 'Freelance', icon: 'laptop', color: '#673AB7' },
+        { name: 'Borrowed Money', icon: 'person-add', color: '#9C27B0' },
+        { name: 'Debt Repayment Received', icon: 'card', color: '#4CAF50' },
         { name: 'Other Income', icon: 'add-circle', color: '#9C27B0' },
       ];
 
@@ -171,6 +175,8 @@ class DatabaseService {
         { name: 'Education', icon: 'book', color: '#2196F3' },
         { name: 'Travel', icon: 'airplane', color: '#00BCD4' },
         { name: 'Home', icon: 'home', color: '#4CAF50' },
+        { name: 'Lent Money', icon: 'person-remove', color: '#FF6F00' },
+        { name: 'Debt Repayment', icon: 'card', color: '#FF9800' },
         { name: 'Other Expense', icon: 'remove-circle', color: '#9E9E9E' },
       ];
 
@@ -198,6 +204,12 @@ class DatabaseService {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
 
+  private getCategoryIdByName(name: string): string {
+    const db = this.ensureDatabase();
+    const category = db.getFirstSync('SELECT id FROM categories WHERE name = ?', [name]) as { id: string } | null;
+    return category?.id || '';
+  }
+
   private convertDatabaseAccount(dbAccount: DatabaseAccount): Account {
     const baseAccount = {
       id: dbAccount.id,
@@ -213,6 +225,7 @@ class DatabaseService {
       return {
         ...baseAccount,
         type: 'cash',
+        color: dbAccount.color || '#00D2AA',
       };
     } else {
       return {
@@ -230,10 +243,11 @@ class DatabaseService {
     const now = new Date().toISOString();
 
     if (account.type === 'cash') {
+      const cashAccount = account as Omit<CashAccount, 'id' | 'createdAt' | 'updatedAt'>;
       this.ensureDatabase().runSync(
-        `INSERT INTO accounts (id, name, balance, type, emoji, description, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, account.name, account.balance, account.type, account.emoji || null, account.description || null, now, now]
+        `INSERT INTO accounts (id, name, balance, type, color, emoji, description, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, cashAccount.name, cashAccount.balance, cashAccount.type, cashAccount.color || null, cashAccount.emoji || null, cashAccount.description || null, now, now]
       );
     } else {
       const cardAccount = account as Omit<CardAccount, 'id' | 'createdAt' | 'updatedAt'>;
@@ -318,7 +332,7 @@ class DatabaseService {
       throw new Error('INVALID_ACCOUNT: Account ID is required');
     }
 
-    if (!transaction.categoryId) {
+    if (!transaction.categoryId && transaction.type !== 'transfer') {
       throw new Error('INVALID_CATEGORY: Category ID is required');
     }
 
@@ -536,6 +550,9 @@ class DatabaseService {
 
       // Create the main transaction record
       const transactionType = debtData.type === 'got' ? 'borrowed' : 'lent';
+      const categoryId = debtData.type === 'got' 
+        ? this.getCategoryIdByName('Borrowed Money')
+        : this.getCategoryIdByName('Lent Money');
       
       db.runSync(
         `INSERT INTO transactions (id, type, amount, title, description, category_id, account_id, date, created_at, status)
@@ -546,7 +563,7 @@ class DatabaseService {
           debtData.amount,
           `${debtData.type === 'got' ? 'Borrowed from' : 'Lent to'} ${debtData.personName}`,
           debtData.description || null,
-          '', // No category for debt transactions
+          categoryId,
           debtData.accountId,
           now.toISOString(),
           now.toISOString(),
@@ -633,6 +650,8 @@ class DatabaseService {
         this.updateAccountBalance(paymentAccountId, newBalance);
 
         // Create repayment transaction
+        const categoryId = this.getCategoryIdByName('Debt Repayment');
+        
         db.runSync(
           `INSERT INTO transactions (id, type, amount, title, description, category_id, account_id, date, created_at, status)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -642,7 +661,7 @@ class DatabaseService {
             debt.amount,
             `Repaid debt to ${debt.personName}`,
             debt.description || null,
-            '', // No category for debt transactions
+            categoryId,
             paymentAccountId,
             now.toISOString(),
             now.toISOString(),
@@ -655,6 +674,8 @@ class DatabaseService {
         this.updateAccountBalance(paymentAccountId, newBalance);
 
         // Create repayment transaction
+        const categoryId = this.getCategoryIdByName('Debt Repayment Received');
+        
         db.runSync(
           `INSERT INTO transactions (id, type, amount, title, description, category_id, account_id, date, created_at, status)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -664,7 +685,7 @@ class DatabaseService {
             debt.amount,
             `Received debt repayment from ${debt.personName}`,
             debt.description || null,
-            '', // No category for debt transactions  
+            categoryId,
             paymentAccountId,
             now.toISOString(),
             now.toISOString(),
@@ -813,8 +834,8 @@ class DatabaseService {
     const query = `
       SELECT 
         strftime('%Y-%m', date) as month,
-        SUM(CASE WHEN type = 'income' AND status = 'success' THEN amount ELSE 0 END) as income,
-        SUM(CASE WHEN type = 'expense' AND status = 'success' THEN amount ELSE 0 END) as expense
+        SUM(CASE WHEN (type = 'income' OR type = 'borrowed') AND status = 'success' THEN amount ELSE 0 END) as income,
+        SUM(CASE WHEN (type = 'expense' OR type = 'lent') AND status = 'success' THEN amount ELSE 0 END) as expense
       FROM transactions 
       WHERE date >= date('now', '-${months} months')
       GROUP BY strftime('%Y-%m', date)
@@ -834,8 +855,8 @@ class DatabaseService {
   getCurrentMonthData(): { income: number; expense: number; net: number } {
     const query = `
       SELECT 
-        SUM(CASE WHEN type = 'income' AND status = 'success' THEN amount ELSE 0 END) as income,
-        SUM(CASE WHEN type = 'expense' AND status = 'success' THEN amount ELSE 0 END) as expense
+        SUM(CASE WHEN (type = 'income' OR type = 'borrowed') AND status = 'success' THEN amount ELSE 0 END) as income,
+        SUM(CASE WHEN (type = 'expense' OR type = 'lent') AND status = 'success' THEN amount ELSE 0 END) as expense
       FROM transactions 
       WHERE strftime('%Y-%m', date) = strftime('%Y-%m', 'now')
     `;
@@ -857,8 +878,8 @@ class DatabaseService {
     const query = `
       SELECT 
         date,
-        SUM(CASE WHEN type = 'income' AND status = 'success' THEN amount ELSE 0 END) as income,
-        SUM(CASE WHEN type = 'expense' AND status = 'success' THEN amount ELSE 0 END) as expense
+        SUM(CASE WHEN (type = 'income' OR type = 'borrowed') AND status = 'success' THEN amount ELSE 0 END) as income,
+        SUM(CASE WHEN (type = 'expense' OR type = 'lent') AND status = 'success' THEN amount ELSE 0 END) as expense
       FROM transactions 
       WHERE date >= date('now', '-${days} days')
       GROUP BY date
@@ -1436,6 +1457,28 @@ class DatabaseService {
     const db = this.ensureDatabase();
     db.execSync('DELETE FROM categories');
     this.insertDefaultCategories();
+  }
+
+  // Method to ensure debt categories exist (for migration)
+  private ensureDebtCategories(): void {
+    const debtCategories = [
+      { name: 'Borrowed Money', type: 'income', icon: 'person-add', color: '#9C27B0' },
+      { name: 'Debt Repayment Received', type: 'income', icon: 'card', color: '#4CAF50' },
+      { name: 'Lent Money', type: 'expense', icon: 'person-remove', color: '#FF6F00' },
+      { name: 'Debt Repayment', type: 'expense', icon: 'card', color: '#FF9800' },
+    ];
+
+    const db = this.ensureDatabase();
+    for (const category of debtCategories) {
+      const existing = db.getFirstSync('SELECT id FROM categories WHERE name = ?', [category.name]);
+      if (!existing) {
+        const id = this.generateId();
+        db.runSync(
+          'INSERT INTO categories (id, name, type, icon, color) VALUES (?, ?, ?, ?, ?)',
+          [id, category.name, category.type, category.icon, category.color]
+        );
+      }
+    }
   }
 
   getTotalBalance(): { cash: number; cards: number; total: number } {

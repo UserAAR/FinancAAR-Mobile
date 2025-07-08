@@ -375,13 +375,13 @@ CURRENT DATE & TIME CONTEXT:
           };
         });
       
-      // Calculate debt details with person names
+      // Calculate debt details with person names (ONLY ACTIVE DEBTS)
       const totalDebts = debts
-        .filter(d => d.type === 'got') // Money we owe to others
+        .filter(d => d.type === 'got' && d.status === 'active') // Only active money we owe to others
         .reduce((sum, d) => sum + d.amount, 0);
       
       const totalOwedToUs = debts
-        .filter(d => d.type === 'gave') // Money others owe to us
+        .filter(d => d.type === 'gave' && d.status === 'active') // Only active money others owe to us
         .reduce((sum, d) => sum + d.amount, 0);
       
       const totalAssets = accounts.reduce((sum, acc) => sum + acc.balance, 0);
