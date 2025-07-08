@@ -27,6 +27,9 @@
   <a href="https://financaar.rf.gd" target="_blank">
     <img src="https://img.shields.io/badge/Live%20Demo-%F0%9F%9A%80%20Open-blueviolet?style=for-the-badge&logo=kdenlive" alt="Live Demo" />
   </a>
+  <a href="https://github.com/UserAAR/FinancAAR-Mobile/releases" target="_blank">
+  <img src="https://img.shields.io/badge/Release%20Notes-%E2%9C%A8%20View-green?style=for-the-badge&logo=logstash" alt="Release Notes" />
+  </a>
   <a href="https://github.com/UserAAR/FinancAAR-Mobile/wiki" target="_blank">
     <img src="https://img.shields.io/badge/Documentation-%F0%9F%93%9A%20Read-blue?style=for-the-badge&logo=readthedocs" alt="Documentation" />
   </a>
