@@ -74,9 +74,9 @@ body {
 
 /* Screenshots Carousel */
 .screenshots { padding: 5rem 0; background: var(--surface); }
-.carousel { position: relative; overflow: hidden; max-width: 340px; margin: 0 auto; }
+.carousel { position: relative; overflow: hidden; max-width: 300px; width: 100%; margin: 0 auto; }
 .slides { display: flex; transition: transform 0.6s ease; }
-.slides img { width: 340px; border-radius: 20px; flex-shrink: 0; }
+.slides img { width: 100%; border-radius: 20px; flex: 0 0 100%; }
 .carousel-indicators { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
 .carousel-indicators span {
   width: 10px; height: 10px; border-radius: 50%;
@@ -85,7 +85,11 @@ body {
 }
 .carousel-indicators .active { background: var(--accent); }
 
-@media(max-width:600px){.slides img{width:280px;}}
+@media(max-width:600px){
+  .slides img{
+    width: 100%;
+  }
+}
 
 /* Download */
 .download { padding: 5rem 0; text-align: center; }
@@ -98,6 +102,12 @@ body {
 .footer .socials svg:hover { fill: var(--accent); }
 
 @media (max-width: 600px) {
+  .carousel {
+    max-width: 240px;
+  }
   .hero-content { flex-direction: column; text-align: center; }
   .hero-mockup img { width: 200px; }
+  .slides img{
+    width: 100%;
+  }
 } 
