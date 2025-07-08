@@ -27,31 +27,14 @@ for (let i = 0; i < totalSlides; i++) {
 }
 updateCarousel(0);
 
-// Auto-play every 5 seconds
-let autoplay = setInterval(() => {
+function nextSlide() {
   currentIndex = (currentIndex + 1) % slides.length;
   updateCarousel(currentIndex);
-}, 5000);
+}
+
+let autoplay = setInterval(nextSlide, 5000);
 
 function resetTimer() {
   clearInterval(autoplay);
-  autoplay = setInterval(() => {
-    currentIndex = (currentIndex + 1) % slides.length;
-    updateCarousel(currentIndex);
-  }, 5000);
-}
-
-const prevBtn = document.querySelector('.carousel-btn.prev');
-const nextBtn = document.querySelector('.carousel-btn.next');
-
-prevBtn.addEventListener('click', () => {
-  currentIndex = (currentIndex - 1 + totalSlides) % totalSlides;
-  updateCarousel(currentIndex);
-  resetTimer();
-});
-
-nextBtn.addEventListener('click', () => {
-  currentIndex = (currentIndex + 1) % totalSlides;
-  updateCarousel(currentIndex);
-  resetTimer();
-}); 
+  autoplay = setInterval(nextSlide, 5000);
+} 

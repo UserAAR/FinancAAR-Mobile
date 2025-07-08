@@ -85,11 +85,7 @@ body {
 }
 .carousel-indicators .active { background: var(--accent); }
 
-.carousel-btn {position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.4);border:none;color:#fff;font-size:1.5rem;padding:0.5rem 0.8rem;border-radius:50%;cursor:pointer;transition:background 0.2s ease;}
-.carousel-btn:hover{background:rgba(0,0,0,0.7);} 
-.carousel-btn.prev{left:-40px;} 
-.carousel-btn.next{right:-40px;} 
-@media(max-width:600px){.carousel-btn.prev{left:6px;}.carousel-btn.next{right:6px;}.slides img{width:280px;}}
+@media(max-width:600px){.slides img{width:280px;}}
 
 /* Download */
 .download { padding: 5rem 0; text-align: center; }
