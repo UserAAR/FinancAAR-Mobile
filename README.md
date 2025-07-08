@@ -4,6 +4,10 @@
 
 <br/>
 
+<img src="https://img.shields.io/badge/FinancAAR%20Finance%20Manager-blueviolet?style=for-the-badge" alt="FinancAAR Finance Manager Badge" />
+
+<br/>
+
 <strong>Offline-first, privacy-focused personal finance manager built with React Native</strong>
 
 <br/><br/>
