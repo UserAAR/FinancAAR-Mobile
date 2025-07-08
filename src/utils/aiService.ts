@@ -2,6 +2,7 @@ import NetInfo from '@react-native-community/netinfo';
 import Constants from 'expo-constants';
 import { database } from './database';
 import { Transaction, Account, Debt } from '../types';
+import * as SecureStore from 'expo-secure-store';
 
 interface FinancialData {
   totalIncome: number;
@@ -101,7 +102,8 @@ interface ConnectivityState {
 }
 
 class AIService {
-  private readonly API_KEY = 'AIzaSyAUGk2qiTwg1KWzFmQ15QELkjHhKNzzxsE';
+  // Default Gemini API key bundled with the app (fallback)
+  private readonly DEFAULT_API_KEY = 'AIzaSyAUGk2qiTwg1KWzFmQ15QELkjHhKNzzxsE';
   private readonly baseURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
   private chatContext: ChatMessage[] = [];
   
@@ -171,43 +173,39 @@ CURRENT DATE & TIME CONTEXT:
     }
 
     try {
-      const response = await fetch(`${this.baseURL}?key=${this.API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: isAnalysis ? 0.3 : 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: isAnalysis ? 2048 : 1024,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+      // Prefer user-supplied API key from secure storage if available
+      const customKey = await SecureStore.getItemAsync('gemini_api_key');
+      const apiKeyToUse = customKey || this.DEFAULT_API_KEY;
+
+      const doFetch = async (key: string) => {
+        return await fetch(`${this.baseURL}?key=${key}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: isAnalysis ? 0.3 : 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: isAnalysis ? 2048 : 768,
             },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
-        }),
-      });
+            safetySettings: [
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
+            ]
+          }),
+        });
+      };
+
+      let response = await doFetch(apiKeyToUse);
+
+      // If custom key failed with 4xx, retry with default key as fallback
+      if (!response.ok && customKey) {
+        console.warn('Custom Gemini API key failed, retrying with fallback key');
+        response = await doFetch(this.DEFAULT_API_KEY);
+      }
 
       if (!response.ok) {
         throw new Error(`AI_API_ERROR: ${response.status}`);
